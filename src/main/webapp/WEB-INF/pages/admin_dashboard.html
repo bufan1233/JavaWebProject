@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>销售额监测面板</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f7f6; color: #333; padding: 40px; }
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h2 { border-left: 5px solid #2c3e50; padding-left: 15px; color: #2c3e50; }
+        table { width: 100%; border-collapse: collapse; margin-top: 25px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: #2c3e50; color: #fff; text-transform: uppercase; font-size: 13px; }
+        .revenue-cell { font-weight: bold; color: #27ae60; }
+        .top-row { background-color: #f1fcf4; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; background: #e67e22; color: #fff; }
+        .nav-link { display: inline-block; margin-top: 20px; color: #3498db; text-decoration: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>📈 核心经营数据监测 (按销售额排序)</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>排行</th>
+            <th>菜品名称</th>
+            <th>单价</th>
+            <th>销量 (份)</th>
+            <th>总销售额 (元)</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="stat, status : ${statsList}" th:class="${status.first} ? 'top-row' : ''">
+            <td>
+                <span th:text="${status.count}">1</span>
+                <span th:if="${status.first}" class="badge">TOP</span>
+            </td>
+            <td th:text="${stat.itemName}">菜品</td>
+            <td th:text="${'￥' + stat.itemPrice}">￥0.00</td>
+            <td th:text="${stat.quantity}">0</td>
+            <td class="revenue-cell" th:text="${'￥' + stat.status}">￥0.00</td>
+        </tr>
+        </tbody>
+    </table>
+    <a href="/admin_menu.html" class="nav-link">← 返回管理中心</a>
+</div>
+</body>
+</html>

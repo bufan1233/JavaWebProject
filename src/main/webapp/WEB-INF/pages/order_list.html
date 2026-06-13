@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>我的订单</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa; padding: 40px; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #007bff; text-decoration: none; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px; border-bottom: 1px solid #eee; }
+        th { text-align: left; color: #666; font-size: 14px; }
+        .status-paid { color: #27ae60; background: #eafaf1; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <a href="/menu" class="back-link">← 返回菜单点餐</a>
+    <h2 style="margin-top:0;">📜 您的订单记录</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>订单号</th>
+            <th>菜品</th>
+            <th>数量</th>
+            <th>总价</th>
+            <th>交易时间</th>
+            <th>状态</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="order : ${orderList}">
+            <td th:text="${'# ' + order.id}">#101</td>
+            <td th:text="${order.itemName}">菜品</td>
+            <td th:text="${order.quantity}">1</td>
+            <td th:text="'￥' + ${order.itemPrice * order.quantity}" style="font-weight:bold;">￥0.00</td>
+            <td th:text="${#dates.format(order.orderTime, 'yyyy-MM-dd HH:mm')}">时间</td>
+            <td><span class="status-paid">已支付</span></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
