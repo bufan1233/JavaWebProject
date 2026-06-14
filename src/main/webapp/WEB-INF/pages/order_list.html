@@ -4,19 +4,53 @@
     <meta charset="UTF-8">
     <title>我的订单</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa; padding: 40px; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .back-link { display: inline-block; margin-bottom: 20px; color: #007bff; text-decoration: none; font-weight: bold; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: #f8fafc;
+            padding: 40px;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(15,23,42,0.04);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .back-link:link, .back-link:visited {
+            display: inline-block;
+            margin-bottom: 25px;
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .back-link:hover { color: #007bff; transform: translateX(-4px); }
+
+        h2 { margin: 0 0 20px 0; font-size: 22px; font-weight: 700; color: #0f172a; }
+
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 15px; border-bottom: 1px solid #eee; }
-        th { text-align: left; color: #666; font-size: 14px; }
-        .status-paid { color: #27ae60; background: #eafaf1; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        th, td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        th { text-align: left; color: #64748b; background: #f8fafc; font-weight: 600; font-size: 13px; }
+
+        .status-paid {
+            color: #10b981;
+            background: #e0f2fe; /* 改为淡雅的浅蓝色或浅绿色基调 */
+            background: #f0fdf4;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
 <div class="card">
     <a href="/menu" class="back-link">← 返回菜单点餐</a>
-    <h2 style="margin-top:0;">📜 您的订单记录</h2>
+    <h2>📜 您的订单记录</h2>
     <table>
         <thead>
         <tr>
@@ -30,11 +64,11 @@
         </thead>
         <tbody>
         <tr th:each="order : ${orderList}">
-            <td th:text="${'# ' + order.id}">#101</td>
-            <td th:text="${order.itemName}">菜品</td>
+            <td th:text="${'# ' + order.id}" style="color:#64748b;">#101</td>
+            <td th:text="${order.itemName}" style="font-weight:500;">菜品</td>
             <td th:text="${order.quantity}">1</td>
-            <td th:text="'￥' + ${order.itemPrice * order.quantity}" style="font-weight:bold;">￥0.00</td>
-            <td th:text="${#dates.format(order.orderTime, 'yyyy-MM-dd HH:mm')}">时间</td>
+            <td th:text="'￥' + ${order.itemPrice * order.quantity}" style="font-weight:700; color:#0f172a;">￥0.00</td>
+            <td th:text="${#dates.format(order.orderTime, 'yyyy-MM-dd HH:mm')}" style="color:#64748b;">时间</td>
             <td><span class="status-paid">已支付</span></td>
         </tr>
         </tbody>

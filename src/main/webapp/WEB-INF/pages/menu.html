@@ -2,64 +2,389 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>点餐中心</title>
+    <title>校园美食中心</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 15px 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .nav-btns a { margin-left: 10px; padding: 8px 16px; border-radius: 5px; text-decoration: none; font-size: 14px; }
-        .btn-order { background: #007bff; color: white; }
-        .btn-logout { background: #6c757d; color: white; }
-        .btn-admin { background: #e74c3c; color: white; font-weight: bold; }
-        .alert-success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin: 20px 0; text-align: center; }
-        table { width: 100%; background: #fff; border-collapse: collapse; margin-top: 20px; border-radius: 8px; overflow: hidden; }
-        th, td { padding: 18px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #343a40; color: white; }
-        .stock-low { color: #e67e22; font-weight: bold; }
+        :root {
+            --primary: #27ae60;
+            --bg: #f1f5f9;
+            /* 基础三重阴影层级，不倾斜时本身就很立体 */
+            --card-base-shadow:
+                    0 12px 24px -10px rgba(15, 23, 42, 0.06),
+                    0 4px 10px -5px rgba(15, 23, 42, 0.03),
+                    0 0 0 1px rgba(15, 23, 42, 0.01);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg); margin: 0; padding: 0;
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #ffffff; padding: 15px 40px; z-index: 10;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.02);
+        }
+
+        .user-profile-trigger {
+            cursor: pointer; padding: 6px 14px; border-radius: 20px;
+            background: #f8fafc; border: 1px solid #e2e8f0; display: inline-block; margin-top: 4px;
+            font-size: 13px; font-weight: 600; color: var(--primary); transition: all 0.2s;
+        }
+        .user-profile-trigger:hover { background: #f0fdf4; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(39,174,96,0.08); }
+
+        .nav-btns a {
+            margin-left: 12px; padding: 10px 20px; border-radius: 8px;
+            text-decoration: none !important; font-size: 14px; font-weight: 500;
+            transition: all 0.25s; display: inline-block;
+        }
+        .nav-btns a:link, .nav-btns a:visited { color: inherit; }
+        .btn-order { background: #ffffff; color: #334155 !important; border: 1px solid #e2e8f0; }
+        .btn-order:hover { background: #f8fafc; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(15,23,42,0.04); }
+
+        .main-container { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+        .sidebar { width: 130px; background: #ffffff; border-right: 1px solid #e2e8f0; padding-top: 10px; z-index: 2; }
+        .sidebar-item {
+            padding: 22px 15px; font-size: 14px; font-weight: 500; color: #64748b;
+            text-align: center; cursor: pointer; transition: all 0.2s; position: relative;
+        }
+        .sidebar-item:hover { color: var(--primary); background: #f8fafc; }
+        .sidebar-item.active { color: var(--primary); background: #f0fdf4; font-weight: 600; }
+        .sidebar-item.active::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--primary);
+        }
+
+        .content-area { flex: 1; overflow-y: auto; padding: 30px 40px; scroll-behavior: smooth; }
+        .category-section { margin-bottom: 50px; }
+        .category-title {
+            font-size: 20px; font-weight: 700; margin-bottom: 20px; color: #0f172a;
+            position: sticky; top: -30px; background: var(--bg); padding: 10px 0; z-index: 5;
+        }
+
+        .menu-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 35px;
+        }
+
+        /* 优化版卡牌：加大尺寸，引入微量渐变过度，降低刻意晃动感 */
+        .menu-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 26px;
+            box-shadow: var(--card-base-shadow);
+            display: flex; flex-direction: column; justify-content: space-between;
+            height: 210px; position: relative; cursor: pointer;
+            perspective: 2000px; /* 增大透视距离，使倾斜形变极为细微 */
+            transform-style: preserve-3d;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            /* 增加 box-shadow 的动画缓冲，让阴影变化更丝滑 */
+            transition: box-shadow 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* 右上角高空立体图片插图（利用 filter 滤镜实现完美图形投影） */
+        .card-image-layer {
+            position: absolute; top: 24px; right: 24px;
+            width: 95px; height: 95px; border-radius: 18px;
+            background: linear-gradient(135deg, #ffedd5 0%, #fee2e2 100%);
+            display: flex; align-items: center; justify-content: center; font-size: 42px;
+            transform: translateZ(25px); /* 漂浮高度从 40px 降至 25px，更柔和 */
+            filter: drop-shadow(0 6px 10px rgba(15, 23, 42, 0.08));
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), filter 0.3s ease;
+            border: 1px solid #ffffff;
+        }
+
+        .menu-card:hover .card-image-layer {
+            filter: drop-shadow(0 10px 15px rgba(15, 23, 42, 0.12));
+        }
+
+        .card-info { max-width: 55%; }
+        .card-info h3 { margin: 0 0 10px 0; font-size: 20px; color: #0f172a; font-weight: 700; }
+        .card-info .price { font-size: 26px; font-weight: 800; color: var(--primary); margin-bottom: 15px; }
+
+        .stock-tag { font-size: 12px; padding: 4px 10px; border-radius: 20px; background: #f1f5f9; color: #64748b; display: inline-block; }
+        .stock-low { background: #fee2e2; color: #ef4444; font-weight: 600; }
+
+        .btn-select {
+            background: #0f172a; color: white; border: none;
+            padding: 12px 16px; border-radius: 12px; font-weight: 600;
+            cursor: pointer; transition: all 0.25s; width: 100%; text-align: center;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1);
+            transform: translateZ(10px);
+        }
+        .btn-select:hover {
+            background: var(--primary);
+            box-shadow: 0 8px 20px rgba(39,174,96,0.25);
+            transform: translateZ(15px) scale(1.01);
+        }
+
+        /* 右下角可视化悬浮购物车按钮 */
+        .floating-cart-trigger {
+            position: fixed; right: 40px; bottom: 40px;
+            width: 68px; height: 68px; border-radius: 50%;
+            background: linear-gradient(135deg, #27ae60 0%, #11998e 100%); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; cursor: pointer; z-index: 50;
+            box-shadow: 0 12px 28px -4px rgba(39, 174, 96, 0.35), inset 0 2px 4px rgba(255,255,255,0.2);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .floating-cart-trigger:hover {
+            transform: scale(1.08) translateY(-4px);
+            box-shadow: 0 20px 35px -4px rgba(39, 174, 96, 0.45);
+        }
+        .cart-badge {
+            position: absolute; top: -2px; right: -2px;
+            background: #ef4444; color: white; font-size: 11px; font-weight: 700;
+            padding: 3px 8px; border-radius: 10px; border: 2px solid white;
+        }
+
+        /* 抽屉面板 */
+        .cart-drawer, .profile-drawer {
+            position: fixed; top: 0; right: -400px; width: 340px; height: 100vh;
+            background: #ffffff; box-shadow: -15px 0 40px rgba(15,23,42,0.06);
+            z-index: 90; padding: 30px; display: flex; flex-direction: column;
+            transition: right 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .cart-drawer.open, .profile-drawer.open { right: 0; }
+
+        .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 20px; }
+        .drawer-header h3 { margin: 0; font-size: 18px; font-weight: 700; }
+        .close-drawer { background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8; }
+
+        .cart-items-list { flex: 1; overflow-y: auto; }
+        .cart-item-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f8fafc; }
+        .cart-footer { border-top: 1px solid #f1f5f9; padding-top: 20px; }
+        .total-price-box { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; margin-bottom: 15px; }
+
+        /* 模态弹窗 */
+        .modal-overlay {
+            position: fixed; top:0; left:0; right:0; bottom:0;
+            background: rgba(15, 23, 42, 0.3); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 100;
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+        .modal-box {
+            background: #ffffff; width: 420px; border-radius: 24px; padding: 30px;
+            box-shadow: 0 30px 70px -10px rgba(0,0,0,0.15);
+            transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .modal-overlay.open .modal-box { transform: scale(1); }
+
+        .option-group { margin-bottom: 22px; }
+        .option-title { font-weight: 700; font-size: 14px; margin-bottom: 12px; color: #334155; }
+        .option-labels { display: flex; gap: 10px; }
+        .option-labels label {
+            padding: 10px 18px; border: 1px solid #e2e8f0; border-radius: 10px;
+            font-size: 13px; cursor: pointer; transition: all 0.2s; background: #f8fafc;
+        }
+        .option-labels input { display: none; }
+        .option-labels input:checked + label {
+            background: var(--primary); border-color: var(--primary); color: white; font-weight: 600;
+        }
     </style>
 </head>
 <body>
+
 <div class="header">
     <div>
-        <h2 style="margin:0;">🍽️ 校园美食中心</h2>
-        <small th:text="'欢迎, ' + ${session.LOGIN_USER.username}">用户</small>
+        <h2>🍽️ 校园美食中心</h2>
+        <div class="user-profile-trigger" id="profileTrigger" th:text="'👤 个人中心 (' + ${session.LOGIN_USER.username} + ')'">👤 个人中心 (查看资料)</div>
     </div>
     <div class="nav-btns">
-        <a th:if="${session.LOGIN_USER.role == 'ADMIN'}" href="/admin_menu.html" class="btn-admin">进入管理后台</a>
-        <a href="/order/my" class="btn-order">📜 我的订单历史</a>
-        <a href="/logout" class="btn-logout">🚪 退出</a>
+        <a th:if="${session.LOGIN_USER.role == 'ADMIN'}" href="/admin_menu.html" style="background: #fee2e2; color:#ef4444!important; font-weight:600;">进入管理后台</a>
+        <a href="/order/my" class="btn-order">📜 订单历史明细</a>
+        <a href="/logout" class="btn-logout" style="background: #f1f5f9; color: #64748b!important;">🚪 安全退出</a>
     </div>
 </div>
 
-<div th:if="${param.success}" class="alert-success">
-    ✅ 下单成功！库存已实时更新。
+<div class="main-container">
+    <div class="sidebar">
+        <div class="sidebar-item active" data-target="sec-hot">🔥 爆款推荐</div>
+        <div class="sidebar-item" data-target="sec-main">🍚 精选主食</div>
+    </div>
+
+    <div class="content-area" id="contentArea">
+        <div class="category-section" id="sec-hot">
+            <div class="category-title">🔥 爆款推荐</div>
+            <div class="menu-grid">
+
+                <div class="menu-card" th:each="item : ${menuList}"
+                     th:data-id="${item.id}" th:data-name="${item.name}" th:data-price="${item.price}" th:data-stock="${item.stock}">
+
+                    <div class="card-image-layer">🍔</div>
+
+                    <div class="card-info">
+                        <h3 th:text="${item.name}">肉汁大汉堡</h3>
+                        <div class="price" th:text="'￥' + ${item.price}">￥18.00</div>
+                        <div>
+                            <span th:text="'剩 ' + ${item.stock} + ' 份'" th:class="${item.stock < 5} ? 'stock-tag stock-low' : 'stock-tag'">剩 10 份</span>
+                        </div>
+                    </div>
+                    <button class="btn-select" th:disabled="${item.stock <= 0}" th:text="${item.stock > 0 ? '开始选购' : '已售罄'}">开始选购</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
 </div>
 
-<table>
-    <thead>
-    <tr>
-        <th>名称</th>
-        <th>价格</th>
-        <th>剩余库存</th>
-        <th>操作</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="item : ${menuList}">
-        <td th:text="${item.name}" style="font-weight: 500;">菜品</td>
-        <td th:text="'￥' + ${item.price}" style="color: #2c3e50;">￥0.00</td>
-        <td>
-            <span th:text="${item.stock}" th:class="${item.stock < 5} ? 'stock-low' : ''">10</span>
-        </td>
-        <td>
-            <form th:if="${item.stock > 0}" action="/order/create" method="post">
-                <input type="hidden" name="itemId" th:value="${item.id}">
-                <input type="number" name="count" value="1" min="1" th:max="${item.stock}" style="width: 45px; padding: 4px;">
-                <button type="submit" style="background:#27ae60; color:white; border:none; padding:5px 12px; border-radius:3px; cursor:pointer;">立即下单</button>
-            </form>
-            <span th:if="${item.stock <= 0}" style="color: #95a5a6; font-weight: bold;">已售罄</span>
-        </td>
-    </tr>
-    </tbody>
-</table>
+<div class="floating-cart-trigger" id="cartTrigger">
+    🛒<div class="cart-badge" id="cartCount">1</div>
+</div>
+
+<div class="cart-drawer" id="cartDrawer">
+    <div class="drawer-header">
+        <h3>🛒 我的点餐篮 (实时可视化)</h3>
+        <button class="close-drawer" id="closeCart">&times;</button>
+    </div>
+    <div class="cart-items-list">
+        <div class="cart-item-row">
+            <div>
+                <div style="font-weight: 600;">肉汁大汉堡</div>
+                <small style="color: #64748b;">规格: 加辣 / 堂食</small>
+            </div>
+            <div style="font-weight: 700;">￥18.00</div>
+        </div>
+    </div>
+    <div class="cart-footer">
+        <div class="total-price-box">
+            <span>预计总额:</span>
+            <span style="color: var(--primary); font-size: 22px; font-weight:800;">￥18.00</span>
+        </div>
+        <button class="btn-select" style="background: var(--primary);">去结算下单</button>
+    </div>
+</div>
+
+<div class="profile-drawer" id="profileDrawer">
+    <div class="drawer-header">
+        <h3>👤 校园账户中心</h3>
+        <button class="close-drawer" id="closeProfile">&times;</button>
+    </div>
+    <div style="text-align: center; padding: 20px 0;">
+        <div style="width: 85px; height: 85px; border-radius: 50%; background: #f1f5f9; margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center; font-size: 36px;">🎓</div>
+        <h4 th:text="${session.LOGIN_USER.username}" style="margin: 0; font-size: 18px; font-weight:700;">学生用户</h4>
+        <p th:text="${session.LOGIN_USER.role == 'ADMIN' ? '系统管理员' : '认证学生账号'}" style="margin: 6px 0 0 0; font-size: 13px; color:#64748b;">认证学生账号</p>
+    </div>
+    <div style="background: #f8fafc; border-radius: 16px; padding: 20px; margin-top: 15px; font-size: 13px; line-height: 2.2; border: 1px solid #e2e8f0;">
+        <div style="display: flex; justify-content: space-between;"><strong>账户状态:</strong><span style="color: #10b981; font-weight:600;">● 正常运作</span></div>
+        <div style="display: flex; justify-content: space-between;"><strong>消费权限:</strong><span>多卡合一订餐</span></div>
+        <div style="display: flex; justify-content: space-between;"><strong>注册归属:</strong><span>一号食堂校区</span></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+        <div class="drawer-header" style="border:none; margin:0;">
+            <h3 id="modalDishName" style="font-size: 20px; font-weight:700;">规格定制</h3>
+            <button class="close-drawer" id="closeModal">&times;</button>
+        </div>
+        <form th:action="@{/order/create}" method="post" style="margin-top: 20px;">
+            <input type="hidden" name="itemId" id="modalItemId">
+
+            <div class="option-group">
+                <div class="option-title">辣度调节</div>
+                <div class="option-labels">
+                    <input type="radio" name="spicy" id="spicy1" value="none" checked>
+                    <label for="spicy1">不要辣</label>
+                    <input type="radio" name="spicy" id="spicy2" value="mild">
+                    <label for="spicy2">微辣</label>
+                    <input type="radio" name="spicy" id="spicy3" value="hot">
+                    <label for="spicy3">大辣🌶️</label>
+                </div>
+            </div>
+
+            <div class="option-group">
+                <div class="option-title">就餐方式</div>
+                <div class="option-labels">
+                    <input type="radio" name="pack" id="pack1" value="eat-in" checked>
+                    <label for="pack1">堂食</label>
+                    <input type="radio" name="pack" id="pack2" value="take-out">
+                    <label for="pack2">打包 (+￥1)</label>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top:1px solid #f1f5f9;">
+                <span style="font-weight: 700; font-size: 14px; color:#334155;">选购数量</span>
+                <input type="number" name="count" value="1" min="1" id="modalStockMax" style="width: 65px; padding: 8px; border:1px solid #cbd5e1; border-radius:8px; text-align:center; font-weight:600;">
+            </div>
+
+            <button type="submit" class="btn-select" style="margin-top: 25px; background: var(--primary);">确定并加入订餐篮</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // 核心微倾斜算法（已大幅度压缩灵敏度）
+    const cards = document.querySelectorAll('.menu-card');
+    cards.forEach(card => {
+        const imgLayer = card.querySelector('.card-image-layer');
+
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const xc = rect.width / 2;
+            const yc = rect.height / 2;
+
+            // 最大翻转角严格限制在 4deg 以内，克制且平滑
+            const angleX = (yc - y) / yc * 4;
+            const angleY = (x - xc) / xc * 4;
+
+            card.style.transform = `perspective(2000px) rotateX(${angleX}deg) rotateY(${angleY}deg) scale3d(1.015, 1.015, 1.015)`;
+
+            // 影子随位移方向等比例微调
+            const shadowX = -angleY * 1.2;
+            const shadowY = angleX * 1.2;
+            card.style.boxShadow = `${shadowX}px ${shadowY}px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 16px -10px rgba(15, 23, 42, 0.06)`;
+
+            if(imgLayer) {
+                imgLayer.style.transform = `translateZ(30px) translateX(${angleY * 0.4}px) translateY(${-angleX * 0.4}px)`;
+            }
+        });
+
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = 'perspective(2000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+            card.style.boxShadow = 'var(--card-base-shadow)';
+            if(imgLayer) {
+                imgLayer.style.transform = 'translateZ(25px) translateX(0) translateY(0)';
+            }
+        });
+    });
+
+    // 抽屉管理
+    const cartDrawer = document.getElementById('cartDrawer');
+    const profileDrawer = document.getElementById('profileDrawer');
+    document.getElementById('cartTrigger').addEventListener('click', () => cartDrawer.classList.toggle('open'));
+    document.getElementById('closeCart').addEventListener('click', () => cartDrawer.classList.remove('open'));
+    document.getElementById('profileTrigger').addEventListener('click', () => profileDrawer.classList.toggle('open'));
+    document.getElementById('closeProfile').addEventListener('click', () => profileDrawer.classList.remove('open'));
+
+    // 规格弹窗管理
+    const modal = document.getElementById('modalOverlay');
+    cards.forEach(card => {
+        card.addEventListener('click', (e) => {
+            if(e.target.tagName === 'BUTTON' && e.target.disabled) return;
+            document.getElementById('modalDishName').innerText = card.getAttribute('data-name');
+            document.getElementById('modalItemId').value = card.getAttribute('data-id');
+            document.getElementById('modalStockMax').max = card.getAttribute('data-stock');
+            modal.classList.add('open');
+        });
+    });
+    document.getElementById('closeModal').addEventListener('click', () => modal.classList.remove('open'));
+
+    // 分类滑动联动
+    const contentArea = document.getElementById('contentArea');
+    const sections = document.querySelectorAll('.category-section');
+    const sidebarItems = document.querySelectorAll('.sidebar-item');
+    sidebarItems.forEach(item => {
+        item.addEventListener('click', () => {
+            sidebarItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            const target = document.getElementById(item.getAttribute('data-target'));
+            contentArea.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' });
+        });
+    });
+</script>
 </body>
 </html>
