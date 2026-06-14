@@ -2,12 +2,11 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>校园美食中心</title>
+    <title>顾客点餐中心</title>
     <style>
         :root {
             --primary: #27ae60;
             --bg: #f1f5f9;
-            /* 基础三重阴影层级，不倾斜时本身就很立体 */
             --card-base-shadow:
                     0 12px 24px -10px rgba(15, 23, 42, 0.06),
                     0 4px 10px -5px rgba(15, 23, 42, 0.03),
@@ -66,7 +65,7 @@
             display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 35px;
         }
 
-        /* 优化版卡牌：加大尺寸，引入微量渐变过度，降低刻意晃动感 */
+        /* 优化版轻量微倾斜卡牌 */
         .menu-card {
             background: #ffffff;
             border-radius: 24px;
@@ -74,20 +73,18 @@
             box-shadow: var(--card-base-shadow);
             display: flex; flex-direction: column; justify-content: space-between;
             height: 210px; position: relative; cursor: pointer;
-            perspective: 2000px; /* 增大透视距离，使倾斜形变极为细微 */
+            perspective: 2000px;
             transform-style: preserve-3d;
             border: 1px solid rgba(255, 255, 255, 0.8);
-            /* 增加 box-shadow 的动画缓冲，让阴影变化更丝滑 */
             transition: box-shadow 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
-        /* 右上角高空立体图片插图（利用 filter 滤镜实现完美图形投影） */
         .card-image-layer {
             position: absolute; top: 24px; right: 24px;
             width: 95px; height: 95px; border-radius: 18px;
             background: linear-gradient(135deg, #ffedd5 0%, #fee2e2 100%);
             display: flex; align-items: center; justify-content: center; font-size: 42px;
-            transform: translateZ(25px); /* 漂浮高度从 40px 降至 25px，更柔和 */
+            transform: translateZ(25px);
             filter: drop-shadow(0 6px 10px rgba(15, 23, 42, 0.08));
             transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), filter 0.3s ease;
             border: 1px solid #ffffff;
@@ -117,7 +114,6 @@
             transform: translateZ(15px) scale(1.01);
         }
 
-        /* 右下角可视化悬浮购物车按钮 */
         .floating-cart-trigger {
             position: fixed; right: 40px; bottom: 40px;
             width: 68px; height: 68px; border-radius: 50%;
@@ -138,7 +134,6 @@
             padding: 3px 8px; border-radius: 10px; border: 2px solid white;
         }
 
-        /* 抽屉面板 */
         .cart-drawer, .profile-drawer {
             position: fixed; top: 0; right: -400px; width: 340px; height: 100vh;
             background: #ffffff; box-shadow: -15px 0 40px rgba(15,23,42,0.06);
@@ -156,7 +151,6 @@
         .cart-footer { border-top: 1px solid #f1f5f9; padding-top: 20px; }
         .total-price-box { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; margin-bottom: 15px; }
 
-        /* 模态弹窗 */
         .modal-overlay {
             position: fixed; top:0; left:0; right:0; bottom:0;
             background: rgba(15, 23, 42, 0.3); backdrop-filter: blur(4px);
@@ -188,25 +182,25 @@
 
 <div class="header">
     <div>
-        <h2>🍽️ 校园美食中心</h2>
-        <div class="user-profile-trigger" id="profileTrigger" th:text="'👤 个人中心 (' + ${session.LOGIN_USER.username} + ')'">👤 个人中心 (查看资料)</div>
+        <h2>🍽️ 智慧餐点中心</h2>
+        <div class="user-profile-trigger" id="profileTrigger" th:text="'👤 当前台号 (' + ${session.LOGIN_USER.username} + ')'">👤 当前台号 (查看资料)</div>
     </div>
     <div class="nav-btns">
         <a th:if="${session.LOGIN_USER.role == 'ADMIN'}" href="/admin_menu.html" style="background: #fee2e2; color:#ef4444!important; font-weight:600;">进入管理后台</a>
-        <a href="/order/my" class="btn-order">📜 订单历史明细</a>
-        <a href="/logout" class="btn-logout" style="background: #f1f5f9; color: #64748b!important;">🚪 安全退出</a>
+        <a href="/order/my" class="btn-order">📜 我的点单历史</a>
+        <a href="/logout" class="btn-logout" style="background: #f1f5f9; color: #64748b!important;">🚪 结束用餐</a>
     </div>
 </div>
 
 <div class="main-container">
     <div class="sidebar">
-        <div class="sidebar-item active" data-target="sec-hot">🔥 爆款推荐</div>
+        <div class="sidebar-item active" data-target="sec-hot">🔥 主厨推荐</div>
         <div class="sidebar-item" data-target="sec-main">🍚 精选主食</div>
     </div>
 
     <div class="content-area" id="contentArea">
         <div class="category-section" id="sec-hot">
-            <div class="category-title">🔥 爆款推荐</div>
+            <div class="category-title">🔥 主厨推荐</div>
             <div class="menu-grid">
 
                 <div class="menu-card" th:each="item : ${menuList}"
@@ -218,7 +212,7 @@
                         <h3 th:text="${item.name}">肉汁大汉堡</h3>
                         <div class="price" th:text="'￥' + ${item.price}">￥18.00</div>
                         <div>
-                            <span th:text="'剩 ' + ${item.stock} + ' 份'" th:class="${item.stock < 5} ? 'stock-tag stock-low' : 'stock-tag'">剩 10 份</span>
+                            <span th:text="'仅剩 ' + ${item.stock} + ' 份'" th:class="${item.stock < 5} ? 'stock-tag stock-low' : 'stock-tag'">仅剩 10 份</span>
                         </div>
                     </div>
                     <button class="btn-select" th:disabled="${item.stock <= 0}" th:text="${item.stock > 0 ? '开始选购' : '已售罄'}">开始选购</button>
@@ -235,7 +229,7 @@
 
 <div class="cart-drawer" id="cartDrawer">
     <div class="drawer-header">
-        <h3>🛒 我的点餐篮 (实时可视化)</h3>
+        <h3>🛒 我的点餐篮</h3>
         <button class="close-drawer" id="closeCart">&times;</button>
     </div>
     <div class="cart-items-list">
@@ -252,24 +246,24 @@
             <span>预计总额:</span>
             <span style="color: var(--primary); font-size: 22px; font-weight:800;">￥18.00</span>
         </div>
-        <button class="btn-select" style="background: var(--primary);">去结算下单</button>
+        <button class="btn-select" style="background: var(--primary);">确认下单一键叫餐</button>
     </div>
 </div>
 
 <div class="profile-drawer" id="profileDrawer">
     <div class="drawer-header">
-        <h3>👤 校园账户中心</h3>
+        <h3>👤 顾客点餐账户</h3>
         <button class="close-drawer" id="closeProfile">&times;</button>
     </div>
     <div style="text-align: center; padding: 20px 0;">
-        <div style="width: 85px; height: 85px; border-radius: 50%; background: #f1f5f9; margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center; font-size: 36px;">🎓</div>
-        <h4 th:text="${session.LOGIN_USER.username}" style="margin: 0; font-size: 18px; font-weight:700;">学生用户</h4>
-        <p th:text="${session.LOGIN_USER.role == 'ADMIN' ? '系统管理员' : '认证学生账号'}" style="margin: 6px 0 0 0; font-size: 13px; color:#64748b;">认证学生账号</p>
+        <div style="width: 85px; height: 85px; border-radius: 50%; background: #f1f5f9; margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center; font-size: 36px;">🛎️</div>
+        <h4 th:text="${session.LOGIN_USER.username}" style="margin: 0; font-size: 18px; font-weight:700;">临时餐台用户</h4>
+        <p th:text="${session.LOGIN_USER.role == 'ADMIN' ? '系统管理员' : '在线就座顾客'}" style="margin: 6px 0 0 0; font-size: 13px; color:#64748b;">在线就座顾客</p>
     </div>
     <div style="background: #f8fafc; border-radius: 16px; padding: 20px; margin-top: 15px; font-size: 13px; line-height: 2.2; border: 1px solid #e2e8f0;">
-        <div style="display: flex; justify-content: space-between;"><strong>账户状态:</strong><span style="color: #10b981; font-weight:600;">● 正常运作</span></div>
-        <div style="display: flex; justify-content: space-between;"><strong>消费权限:</strong><span>多卡合一订餐</span></div>
-        <div style="display: flex; justify-content: space-between;"><strong>注册归属:</strong><span>一号食堂校区</span></div>
+        <div style="display: flex; justify-content: space-between;"><strong>连接状态:</strong><span style="color: #10b981; font-weight:600;">● 已成功连线</span></div>
+        <div style="display: flex; justify-content: space-between;"><strong>台位归属:</strong><span>大厅堂食</span></div>
+        <div style="display: flex; justify-content: space-between;"><strong>计费服务:</strong><span>在线即时入账</span></div>
     </div>
 </div>
 
@@ -283,10 +277,10 @@
             <input type="hidden" name="itemId" id="modalItemId">
 
             <div class="option-group">
-                <div class="option-title">辣度调节</div>
+                <div class="option-title">口味调节</div>
                 <div class="option-labels">
                     <input type="radio" name="spicy" id="spicy1" value="none" checked>
-                    <label for="spicy1">不要辣</label>
+                    <label for="spicy1">不加辣</label>
                     <input type="radio" name="spicy" id="spicy2" value="mild">
                     <label for="spicy2">微辣</label>
                     <input type="radio" name="spicy" id="spicy3" value="hot">
@@ -300,7 +294,7 @@
                     <input type="radio" name="pack" id="pack1" value="eat-in" checked>
                     <label for="pack1">堂食</label>
                     <input type="radio" name="pack" id="pack2" value="take-out">
-                    <label for="pack2">打包 (+￥1)</label>
+                    <label for="pack2">打包 (+$1)</label>
                 </div>
             </div>
 
@@ -309,13 +303,13 @@
                 <input type="number" name="count" value="1" min="1" id="modalStockMax" style="width: 65px; padding: 8px; border:1px solid #cbd5e1; border-radius:8px; text-align:center; font-weight:600;">
             </div>
 
-            <button type="submit" class="btn-select" style="margin-top: 25px; background: var(--primary);">确定并加入订餐篮</button>
+            <button type="submit" class="btn-select" style="margin-top: 25px; background: var(--primary);">确定并加入餐篮</button>
         </form>
     </div>
 </div>
 
 <script>
-    // 核心微倾斜算法（已大幅度压缩灵敏度）
+    // 经压缩后的 4度以内极其自然的微幅倾斜响应代码
     const cards = document.querySelectorAll('.menu-card');
     cards.forEach(card => {
         const imgLayer = card.querySelector('.card-image-layer');
@@ -327,13 +321,11 @@
             const xc = rect.width / 2;
             const yc = rect.height / 2;
 
-            // 最大翻转角严格限制在 4deg 以内，克制且平滑
             const angleX = (yc - y) / yc * 4;
             const angleY = (x - xc) / xc * 4;
 
             card.style.transform = `perspective(2000px) rotateX(${angleX}deg) rotateY(${angleY}deg) scale3d(1.015, 1.015, 1.015)`;
 
-            // 影子随位移方向等比例微调
             const shadowX = -angleY * 1.2;
             const shadowY = angleX * 1.2;
             card.style.boxShadow = `${shadowX}px ${shadowY}px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 16px -10px rgba(15, 23, 42, 0.06)`;
@@ -373,9 +365,8 @@
     });
     document.getElementById('closeModal').addEventListener('click', () => modal.classList.remove('open'));
 
-    // 分类滑动联动
+    // 联动定位
     const contentArea = document.getElementById('contentArea');
-    const sections = document.querySelectorAll('.category-section');
     const sidebarItems = document.querySelectorAll('.sidebar-item');
     sidebarItems.forEach(item => {
         item.addEventListener('click', () => {
