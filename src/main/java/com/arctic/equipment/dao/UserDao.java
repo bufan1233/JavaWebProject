@@ -6,12 +6,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.math.BigDecimal;
 
 public class UserDao {
     // 验证账号密码
     public User login(String username, String password) throws SQLException {
         Connection conn = DBUtil.getConnection();
-        String sql = "SELECT id, username, role FROM user WHERE username = ? AND password = ?";
+        String sql = "SELECT id, username, role, balance FROM user WHERE username = ? AND password = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
             pstmt.setString(2, password);
@@ -21,12 +22,14 @@ public class UserDao {
                     user.setId(rs.getInt("id"));
                     user.setUsername(rs.getString("username"));
                     user.setRole(rs.getString("role"));
+                    user.setBalance(rs.getBigDecimal("balance"));
                     return user;
                 }
             }
         }
         return null;
     }
+
     // 检查用户名是否存在
     public boolean checkUserExists(String username) throws SQLException {
         Connection conn = DBUtil.getConnection();
@@ -36,6 +39,17 @@ public class UserDao {
             try (ResultSet rs = pstmt.executeQuery()) {
                 return rs.next(); // 存在返回 true
             }
+        }
+    }
+
+    public int updateBalance(Integer userId, BigDecimal amount) throws SQLException {
+        Connection conn = DBUtil.getConnection();
+        String sql = "UPDATE user SET balance = balance + ? WHERE id = ? AND (balance + ?) >= 0";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setBigDecimal(1, amount);
+            pstmt.setInt(2, userId);
+            pstmt.setBigDecimal(3, amount);
+            return pstmt.executeUpdate();
         }
     }
 
@@ -49,5 +63,26 @@ public class UserDao {
             pstmt.setString(3, role);
             pstmt.executeUpdate();
         }
+    }
+
+    // 根据 ID 查询用户（含余额）
+    public User findById(Integer id) throws SQLException {
+        Connection conn = DBUtil.getConnection();
+        String sql = "SELECT id, username, role, balance FROM user WHERE id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    User user = new User();
+                    user.setId(rs.getInt("id"));
+                    user.setUsername(rs.getString("username"));
+                    user.setRole(rs.getString("role"));
+                    user.setBalance(rs.getBigDecimal("balance"));
+
+                    return user;
+                }
+            }
+        }
+        return null;
     }
 }

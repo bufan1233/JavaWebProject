@@ -14,6 +14,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import javax.servlet.http.HttpSession;
+import com.arctic.equipment.entity.*;
 
 @WebServlet("/menu")
 public class MenuServlet extends HttpServlet {
@@ -33,9 +35,17 @@ public class MenuServlet extends HttpServlet {
             WebContext ctx = new WebContext(req, resp, servletContext, req.getLocale());
             ctx.setVariable("menuList", items);
 
+            // ====== 新增：把 Session 中的购物车对象同步传给 Thymeleaf 模板 ======
+            HttpSession session = req.getSession();
+            Cart cart = (Cart) session.getAttribute("CART");
+            if (cart == null) {
+                cart = new Cart();
+                session.setAttribute("CART", cart);
+            }
+            ctx.setVariable("cart", cart);
+
             // 4. 渲染 WEB-INF/pages/menu.html 并返回给浏览器
             engine.process("menu", ctx, resp.getWriter());
-
         } catch (SQLException e) {
             e.printStackTrace();
             resp.getWriter().write("加载菜单失败");

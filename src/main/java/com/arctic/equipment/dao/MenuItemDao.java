@@ -91,4 +91,28 @@ public class MenuItemDao {
             pstmt.executeUpdate();
         }
     }
+
+    public MenuItem findById(Integer id)throws  SQLException{
+        Connection conn = DBUtil.getConnection();
+        String sql = "SELECT * FROM menu_item WHERE id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            // 绑定参数
+            pstmt.setInt(1, id);
+
+            // 4. 执行查询
+            try (ResultSet rs = pstmt.executeQuery()) {
+                // 5. 判断是否有这一行数据
+                if (rs.next()) {
+                    // 实例化实体类并装配数据
+                    MenuItem item = new MenuItem();
+                    item.setId(rs.getInt("id"));
+                    item.setName(rs.getString("name"));
+                    item.setPrice(rs.getBigDecimal("price"));
+                    item.setStock(rs.getInt("stock"));
+                    return item; // 查到了，返回对象
+                }
+            }
+        }
+        return null; // 没查到该 id 对应的菜品，返回 null
+    }
 }

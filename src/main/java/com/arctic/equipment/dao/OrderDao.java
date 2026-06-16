@@ -56,6 +56,17 @@ public class OrderDao {
         }
         return list;
     }
+    //取消订单状态
+    public int updateOrderStatus(Integer orderId, Integer userId, String status) throws SQLException {
+        Connection conn = DBUtil.getConnection();
+        String sql = "UPDATE orders SET status = ? WHERE id = ? AND user_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, status);
+            pstmt.setInt(2, orderId);
+            pstmt.setInt(3, userId);
+            return pstmt.executeUpdate();
+        }
+    }
     public List<Order> getSalesStatistics() throws SQLException {
         List<Order> list = new ArrayList<>();
         Connection conn = DBUtil.getConnection();

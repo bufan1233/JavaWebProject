@@ -4,6 +4,37 @@
     <meta charset="UTF-8">
     <title>顾客点餐中心</title>
     <style>
+        .sidebar-container { height: calc(100vh - 70px) !important; overflow-y: auto !important; }
+        #contentArea { height: calc(100vh - 70px) !important; overflow-y: auto !important; position: relative; scroll-behavior: smooth; }
+        .cart-drawer { height: calc(100vh - 70px) !important; overflow-y: auto !important; }
+
+        /* 2. 卡牌放大，右侧留出图片空间 */
+        .dish-card {
+            width: 280px !important;
+            height: 380px !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            transform-style: preserve-3d; /* 激活动态3D视角 */
+            transition: transform 0.1s ease-out;
+        }
+        .dish-card-right-thumb {
+            position: absolute; right: 10px; top: 10px; width: 100px; height: 100px; border-radius: 8px; background: #e2e8f0;
+        }
+
+        /* 3. 购物车挂载到右下角 */
+        #cartBadgeTrigger {
+            position: fixed !important;
+            bottom: 30px !important;
+            right: 30px !important;
+            z-index: 999 !important;
+            background: var(--primary);
+            padding: 15px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
         :root {
             --primary: #27ae60;
             --bg: #f1f5f9;
@@ -17,342 +48,477 @@
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--bg); margin: 0; padding: 0;
             height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+            perspective: 1000px; /* 为3D倾斜提供透视 */
         }
 
         .header {
             display: flex; justify-content: space-between; align-items: center;
-            background: #ffffff; padding: 15px 40px; z-index: 10;
+            background: #ffffff; padding: 15px 40px; z-index: 100;
             box-shadow: 0 4px 20px rgba(15, 23, 42, 0.02);
         }
 
-        .user-profile-trigger {
-            cursor: pointer; padding: 6px 14px; border-radius: 20px;
-            background: #f8fafc; border: 1px solid #e2e8f0; display: inline-block; margin-top: 4px;
-            font-size: 13px; font-weight: 600; color: var(--primary); transition: all 0.2s;
-        }
-        .user-profile-trigger:hover { background: #f0fdf4; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(39,174,96,0.08); }
-
-        .nav-btns a {
-            margin-left: 12px; padding: 10px 20px; border-radius: 8px;
-            text-decoration: none !important; font-size: 14px; font-weight: 500;
-            transition: all 0.25s; display: inline-block;
-        }
-        .nav-btns a:link, .nav-btns a:visited { color: inherit; }
-        .btn-order { background: #ffffff; color: #334155 !important; border: 1px solid #e2e8f0; }
-        .btn-order:hover { background: #f8fafc; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(15,23,42,0.04); }
-
-        .main-container { display: flex; flex: 1; overflow: hidden; position: relative; }
-
-        .sidebar { width: 130px; background: #ffffff; border-right: 1px solid #e2e8f0; padding-top: 10px; z-index: 2; }
-        .sidebar-item {
-            padding: 22px 15px; font-size: 14px; font-weight: 500; color: #64748b;
-            text-align: center; cursor: pointer; transition: all 0.2s; position: relative;
-        }
-        .sidebar-item:hover { color: var(--primary); background: #f8fafc; }
-        .sidebar-item.active { color: var(--primary); background: #f0fdf4; font-weight: 600; }
-        .sidebar-item.active::before {
-            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--primary);
+        .brand-title {
+            font-size: 20px; font-weight: 700; color: #1e293b; letter-spacing: -0.5px;
         }
 
-        .content-area { flex: 1; overflow-y: auto; padding: 30px 40px; scroll-behavior: smooth; }
-        .category-section { margin-bottom: 50px; }
-        .category-title {
-            font-size: 20px; font-weight: 700; margin-bottom: 20px; color: #0f172a;
-            position: sticky; top: -30px; background: var(--bg); padding: 10px 0; z-index: 5;
+        .nav-right {
+            display: flex; align-items: center; gap: 20px;
         }
 
-        .menu-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 35px;
+        .user-wallet {
+            font-size: 14px; color: #64748b; background: #f8fafc; padding: 6px 12px; border-radius: 20px; border: 1px solid #e2e8f0;
         }
 
-        /* 优化版轻量微倾斜卡牌 */
-        .menu-card {
-            background: #ffffff;
-            border-radius: 24px;
-            padding: 26px;
-            box-shadow: var(--card-base-shadow);
-            display: flex; flex-direction: column; justify-content: space-between;
-            height: 210px; position: relative; cursor: pointer;
-            perspective: 2000px;
-            transform-style: preserve-3d;
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            transition: box-shadow 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        .wallet-amount {
+            color: #e74c3c; font-weight: 600; margin-left: 4px;
         }
 
-        .card-image-layer {
-            position: absolute; top: 24px; right: 24px;
-            width: 95px; height: 95px; border-radius: 18px;
-            background: linear-gradient(135deg, #ffedd5 0%, #fee2e2 100%);
-            display: flex; align-items: center; justify-content: center; font-size: 42px;
-            transform: translateZ(25px);
-            filter: drop-shadow(0 6px 10px rgba(15, 23, 42, 0.08));
-            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), filter 0.3s ease;
-            border: 1px solid #ffffff;
+        .action-btn {
+            background: none; border: none; padding: 8px 14px; font-size: 14px; color: #475569;
+            cursor: pointer; border-radius: 8px; transition: all 0.2s; font-weight: 500;
         }
 
-        .menu-card:hover .card-image-layer {
-            filter: drop-shadow(0 10px 15px rgba(15, 23, 42, 0.12));
+        .action-btn:hover {
+            background: #f1f5f9; color: #0f172a;
         }
 
-        .card-info { max-width: 55%; }
-        .card-info h3 { margin: 0 0 10px 0; font-size: 20px; color: #0f172a; font-weight: 700; }
-        .card-info .price { font-size: 26px; font-weight: 800; color: var(--primary); margin-bottom: 15px; }
-
-        .stock-tag { font-size: 12px; padding: 4px 10px; border-radius: 20px; background: #f1f5f9; color: #64748b; display: inline-block; }
-        .stock-low { background: #fee2e2; color: #ef4444; font-weight: 600; }
-
-        .btn-select {
-            background: #0f172a; color: white; border: none;
-            padding: 12px 16px; border-radius: 12px; font-weight: 600;
-            cursor: pointer; transition: all 0.25s; width: 100%; text-align: center;
-            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1);
-            transform: translateZ(10px);
-        }
-        .btn-select:hover {
-            background: var(--primary);
-            box-shadow: 0 8px 20px rgba(39,174,96,0.25);
-            transform: translateZ(15px) scale(1.01);
+        .cart-btn {
+            position: relative; background: #eafaf1; color: var(--primary); font-weight: 600;
         }
 
-        .floating-cart-trigger {
-            position: fixed; right: 40px; bottom: 40px;
-            width: 68px; height: 68px; border-radius: 50%;
-            background: linear-gradient(135deg, #27ae60 0%, #11998e 100%); color: white;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 28px; cursor: pointer; z-index: 50;
-            box-shadow: 0 12px 28px -4px rgba(39, 174, 96, 0.35), inset 0 2px 4px rgba(255,255,255,0.2);
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            border: 1px solid rgba(255,255,255,0.1);
+        .cart-btn:hover {
+            background: #d4f5e2; color: #219653;
         }
-        .floating-cart-trigger:hover {
-            transform: scale(1.08) translateY(-4px);
-            box-shadow: 0 20px 35px -4px rgba(39, 174, 96, 0.45);
-        }
+
         .cart-badge {
-            position: absolute; top: -2px; right: -2px;
-            background: #ef4444; color: white; font-size: 11px; font-weight: 700;
-            padding: 3px 8px; border-radius: 10px; border: 2px solid white;
+            position: absolute; top: -5px; right: -5px; background: #ff4757; color: white;
+            font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: 600;
+            box-shadow: 0 2px 8px rgba(255,71,87,0.3);
         }
 
-        .cart-drawer, .profile-drawer {
-            position: fixed; top: 0; right: -400px; width: 340px; height: 100vh;
-            background: #ffffff; box-shadow: -15px 0 40px rgba(15,23,42,0.06);
-            z-index: 90; padding: 30px; display: flex; flex-direction: column;
-            transition: right 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        .main-container {
+            display: flex; flex: 1; overflow: hidden; position: relative;
         }
-        .cart-drawer.open, .profile-drawer.open { right: 0; }
 
-        .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 20px; }
-        .drawer-header h3 { margin: 0; font-size: 18px; font-weight: 700; }
-        .close-drawer { background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8; }
+        .sidebar {
+            width: 240px; background: #ffffff; border-right: 1px solid #f1f5f9;
+            padding: 20px 10px; display: flex; flex-direction: column; gap: 4px;
+        }
 
-        .cart-items-list { flex: 1; overflow-y: auto; }
-        .cart-item-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f8fafc; }
-        .cart-footer { border-top: 1px solid #f1f5f9; padding-top: 20px; }
-        .total-price-box { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; margin-bottom: 15px; }
+        .sidebar-item {
+            padding: 12px 16px; border-radius: 8px; font-size: 14px; color: #475569;
+            cursor: pointer; transition: all 0.2s; font-weight: 500;
+        }
 
-        .modal-overlay {
-            position: fixed; top:0; left:0; right:0; bottom:0;
+        .sidebar-item:hover {
+            background: #f8fafc; color: #0f172a;
+        }
+
+        .sidebar-item.active {
+            background: #eafaf1; color: var(--primary); font-weight: 600;
+        }
+
+        .content-area {
+            flex: 1; padding: 30px 40px; overflow-y: auto; scroll-behavior: smooth;
+        }
+
+        .section-title {
+            font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .section-title::before {
+            content: ''; display: inline-block; width: 4px; height: 16px; background: var(--primary); border-radius: 2px;
+        }
+
+        .dish-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 25px; margin-bottom: 40px;
+        }
+
+        .dish-card {
+            background: #ffffff; border-radius: 16px; padding: 20px;
+            box-shadow: var(--card-base-shadow); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 12px;
+            transform-style: preserve-3d;
+        }
+
+        .dish-card:hover {
+            transform: translateY(-5px) rotateX(2deg) rotateY(2deg);
+            box-shadow: 0 20px 35px -10px rgba(15, 23, 42, 0.12), 0 10px 15px -5px rgba(15, 23, 42, 0.04);
+        }
+
+        .dish-name {
+            font-size: 16px; font-weight: 600; color: #1e293b; margin: 0;
+        }
+
+        .dish-meta {
+            display: flex; justify-content: space-between; align-items: center; margin-top: auto;
+        }
+
+        .dish-price {
+            font-size: 18px; font-weight: 700; color: #ff4757;
+        }
+
+        .dish-stock {
+            font-size: 12px; color: #94a3b8;
+        }
+
+        .add-cart-btn {
+            width: 100%; background: var(--primary); color: white; border: none;
+            padding: 10px; border-radius: 10px; font-weight: 600; cursor: pointer;
+            transition: background 0.2s; margin-top: 8px;
+        }
+
+        .add-cart-btn:hover {
+            background: #219653;
+        }
+
+        .add-cart-btn:disabled {
+            background: #cbd5e1; color: #94a3b8; cursor: not-allowed;
+        }
+
+        /* 抽屉基类 */
+        .drawer-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.3); backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 100;
+            z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
         }
-        .modal-overlay.open { opacity: 1; pointer-events: auto; }
-        .modal-box {
-            background: #ffffff; width: 420px; border-radius: 24px; padding: 30px;
-            box-shadow: 0 30px 70px -10px rgba(0,0,0,0.15);
-            transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .modal-overlay.open .modal-box { transform: scale(1); }
 
-        .option-group { margin-bottom: 22px; }
-        .option-title { font-weight: 700; font-size: 14px; margin-bottom: 12px; color: #334155; }
-        .option-labels { display: flex; gap: 10px; }
-        .option-labels label {
-            padding: 10px 18px; border: 1px solid #e2e8f0; border-radius: 10px;
-            font-size: 13px; cursor: pointer; transition: all 0.2s; background: #f8fafc;
+        .drawer-overlay.open {
+            opacity: 1; pointer-events: auto;
         }
-        .option-labels input { display: none; }
-        .option-labels input:checked + label {
-            background: var(--primary); border-color: var(--primary); color: white; font-weight: 600;
+
+        .drawer-content {
+            position: absolute; top: 0; right: 0; width: 420px; height: 100%;
+            background: #ffffff; box-shadow: -10px 0 40px rgba(0,0,0,0.1);
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex; flex-direction: column;
+        }
+
+        .drawer-overlay.open .drawer-content {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            padding: 24px; border-bottom: 1px solid #f1f5f9;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .drawer-title {
+            font-size: 18px; font-weight: 700; color: #0f172a; margin: 0;
+        }
+
+        .drawer-close {
+            background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer;
+        }
+
+        .drawer-close:hover {
+            color: #475569;
+        }
+
+        .drawer-body {
+            flex: 1; padding: 24px; overflow-y: auto;
+        }
+
+        /* 购物车列表样式 */
+        .cart-item-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 0; border-bottom: 1px solid #f8fafc;
+        }
+
+        .cart-item-info {
+            display: flex; flex-direction: column; gap: 4px;
+        }
+
+        .cart-item-name {
+            font-size: 14px; font-weight: 600; color: #1e293b;
+        }
+
+        .cart-item-price {
+            font-size: 13px; color: #ff4757; font-weight: 600;
+        }
+
+        .quantity-control {
+            display: flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 4px; border-radius: 8px;
+        }
+
+        .quantity-btn {
+            background: #ffffff; border: none; width: 24px; height: 24px; border-radius: 6px;
+            font-size: 14px; font-weight: 600; color: #475569; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .quantity-value {
+            font-size: 13px; font-weight: 600; color: #1e293b; min-width: 16px; text-align: center;
+        }
+
+        .drawer-footer {
+            padding: 24px; border-top: 1px solid #f1f5f9; background: #f8fafc;
+        }
+
+        .cart-summary {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+        }
+
+        .summary-label {
+            font-size: 14px; color: #64748b;
+        }
+
+        .summary-total {
+            font-size: 22px; font-weight: 800; color: #ff4757;
+        }
+
+        .checkout-btn {
+            width: 100%; background: var(--primary); color: white; border: none; padding: 14px;
+            border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+        }
+
+        .checkout-btn:hover {
+            background: #219653;
+        }
+
+        /* 充值界面元素样式 */
+        .recharge-box {
+            background: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px; display: flex; flex-direction: column; gap: 6px;
+        }
+
+        .form-label {
+            font-size: 13px; font-weight: 600; color: #475569;
+        }
+
+        .form-input {
+            padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; transition: border 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+        }
+
+        .submit-btn {
+            width: 100%; background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+        }
+
+        .submit-btn:hover {
+            background: #2980b9;
+        }
+
+        /* 传统规格规格弹窗（保持原有代码不删除） */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px);
+            z-index: 300; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1; pointer-events: auto;
+        }
+
+        .modal-box {
+            background: #ffffff; border-radius: 16px; width: 360px; padding: 25px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15); position: relative;
+        }
+
+        /* 成功提示栏 */
+        .alert-success-top {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: #2ecc71; color: white; padding: 12px 30px; border-radius: 30px;
+            font-weight: 600; box-shadow: 0 10px 20px rgba(46,204,113,0.3);
+            z-index: 999; animation: slideDownIn 0.4s ease forwards;
+        }
+
+        @keyframes slideDownIn {
+            0% { top: -60px; opacity: 0; }
+            100% { top: 20px; opacity: 1; }
         }
     </style>
 </head>
 <body>
 
+<div th:if="${param.success}" class="alert-success-top" id="successNotification">
+    🎉 交易结算成功！美味即刻为您呈现。
+</div>
+
 <div class="header">
-    <div>
-        <h2>🍽️ 智慧餐点中心</h2>
-        <div class="user-profile-trigger" id="profileTrigger" th:text="'👤 当前台号 (' + ${session.LOGIN_USER.username} + ')'">👤 当前台号 (查看资料)</div>
-    </div>
-    <div class="nav-btns">
-        <a th:if="${session.LOGIN_USER.role == 'ADMIN'}" href="/admin_menu.html" style="background: #fee2e2; color:#ef4444!important; font-weight:600;">进入管理后台</a>
-        <a href="/order/my" class="btn-order">📜 我的点单历史</a>
-        <a href="/logout" class="btn-logout" style="background: #f1f5f9; color: #64748b!important;">🚪 结束用餐</a>
+    <div class="brand-title">Arctic 智慧餐饮中心</div>
+    <div class="nav-right">
+        <div class="user-wallet" th:if="${session.LOGIN_USER != null}">
+            <span>账户可用余额:</span>
+            <span class="wallet-amount" th:text="'￥' + ${session.LOGIN_USER.balance != null ? session.LOGIN_USER.balance : '0.00'}">￥0.00</span>
+        </div>
+
+        <button class="action-btn" id="profileTrigger">个人中心 & 充值</button>
+        <button class="action-btn" onclick="window.location.href='${contextPath}/order/my'">我的历史订单</button>
+        <button class="action-btn cart-btn" id="cartTrigger">
+            购物车清单
+            <span class="cart-badge" id="cartBadgeCount" th:text="${session.CART != null ? session.CART.items.size() : 0}">0</span>
+        </button>
     </div>
 </div>
 
 <div class="main-container">
     <div class="sidebar">
-        <div class="sidebar-item active" data-target="sec-hot">🔥 主厨推荐</div>
-        <div class="sidebar-item" data-target="sec-main">🍚 精选主食</div>
+        <div class="sidebar-item active" data-target="sec-all">全部分类</div>
+        <div class="sidebar-item" data-target="sec-hot">爆款热销</div>
+        <div class="sidebar-item" data-target="sec-drink">精选饮品</div>
     </div>
 
     <div class="content-area" id="contentArea">
-        <div class="category-section" id="sec-hot">
-            <div class="category-title">🔥 主厨推荐</div>
-            <div class="menu-grid">
-
-                <div class="menu-card" th:each="item : ${menuList}"
-                     th:data-id="${item.id}" th:data-name="${item.name}" th:data-price="${item.price}" th:data-stock="${item.stock}">
-
-                    <div class="card-image-layer">🍔</div>
-
-                    <div class="card-info">
-                        <h3 th:text="${item.name}">肉汁大汉堡</h3>
-                        <div class="price" th:text="'￥' + ${item.price}">￥18.00</div>
-                        <div>
-                            <span th:text="'仅剩 ' + ${item.stock} + ' 份'" th:class="${item.stock < 5} ? 'stock-tag stock-low' : 'stock-tag'">仅剩 10 份</span>
-                        </div>
-                    </div>
-                    <button class="btn-select" th:disabled="${item.stock <= 0}" th:text="${item.stock > 0 ? '开始选购' : '已售罄'}">开始选购</button>
+        <div class="section-title" id="sec-all">全部分类</div>
+        <div class="dish-grid">
+            <div class="dish-card" th:each="item : ${menuList}"
+                 th:data-id="${item.id}" th:data-name="${item.name}" th:data-stock="${item.stock}">
+                <h3 class="dish-name" th:text="${item.name}">黄金炒饭</h3>
+                <div class="dish-meta">
+                    <span class="dish-price" th:text="'￥' + ${item.price}">￥25.00</span>
+                    <span class="dish-stock" th:text="'剩余库存: ' + ${item.stock} + ' 份'">剩余库存: 10 份</span>
                 </div>
-
+                <button class="add-cart-btn"
+                        th:disabled="${item.stock <= 0}"
+                        th:text="${item.stock > 0 ? '加入购物车' : '已售罄'}"
+                        th:onclick="'event.stopPropagation(); addToCartDirect(' + ${item.id} + ')'">
+                    加入购物车
+                </button>
             </div>
         </div>
+
+        <div class="section-title" id="sec-hot">爆款热销</div>
+        <div class="dish-grid">
+            <div class="dish-card"><h3 class="dish-name">模拟精选菜品A</h3></div>
+            <div class="dish-card"><h3 class="dish-name">模拟精选菜品B</h3></div>
+        </div>
+
+        <div class="section-title" id="sec-drink">精选饮品</div>
+        <div class="dish-grid">
+            <div class="dish-card"><h3 class="dish-name">冷萃气泡咖啡</h3></div>
+        </div>
     </div>
 </div>
 
-<div class="floating-cart-trigger" id="cartTrigger">
-    🛒<div class="cart-badge" id="cartCount">1</div>
-</div>
-
-<div class="cart-drawer" id="cartDrawer">
-    <div class="drawer-header">
-        <h3>🛒 我的点餐篮</h3>
-        <button class="close-drawer" id="closeCart">&times;</button>
-    </div>
-    <div class="cart-items-list">
-        <div class="cart-item-row">
-            <div>
-                <div style="font-weight: 600;">肉汁大汉堡</div>
-                <small style="color: #64748b;">规格: 加辣 / 堂食</small>
+<div class="drawer-overlay" id="cartDrawer">
+    <div class="drawer-content">
+        <div class="drawer-header">
+            <h3 class="drawer-title">购物车清单</h3>
+            <button class="drawer-close" id="closeCart">×</button>
+        </div>
+        <div class="drawer-body">
+            <div id="cartItemsContainer">
+                <div th:if="${session.CART == null || session.CART.items.isEmpty()}" style="color:#94a3b8; text-align:center; margin-top:40px;">
+                    您的购物车还是空的，快去选购吧！
+                </div>
+                <div th:if="${session.CART != null}" th:each="cartItem : ${session.CART.items}" class="cart-item-row" th:id="'cart-item-' + ${cartItem.menuItem.id}">
+                    <div class="cart-item-info">
+                        <span class="cart-item-name" th:text="${cartItem.menuItem.name}">菜品名称</span>
+                        <span class="cart-item-price" th:text="'￥' + ${cartItem.menuItem.price}">￥0.00</span>
+                    </div>
+                    <div class="quantity-control">
+                        <button class="quantity-btn" th:onclick="'updateCartQuantity(' + ${cartItem.menuItem.id} + ', ' + (${cartItem.count} - 1) + ')'">-</button>
+                        <span class="quantity-value" th:text="${cartItem.count}">1</span>
+                        <button class="quantity-btn" th:onclick="'updateCartQuantity(' + ${cartItem.menuItem.id} + ', ' + (${cartItem.count} + 1) + ')'">+</button>
+                    </div>
+                </div>
             </div>
-            <div style="font-weight: 700;">￥18.00</div>
         </div>
-    </div>
-    <div class="cart-footer">
-        <div class="total-price-box">
-            <span>预计总额:</span>
-            <span style="color: var(--primary); font-size: 22px; font-weight:800;">￥18.00</span>
+        <div class="drawer-footer">
+            <div class="cart-summary">
+                <span class="summary-label">应付合计:</span>
+                <span class="summary-total" id="cartTotalMoneyText" th:text="'￥' + ${session.CART != null ? session.CART.getTotalMoney() : '0.00'}">￥0.00</span>
+            </div>
+            <form th:action="@{/order/payCart}" action="" method="POST">
+                <button type="submit" class="checkout-btn" th:disabled="${session.CART == null || session.CART.items.isEmpty()}">确认收银结算</button>
+            </form>
         </div>
-        <button class="btn-select" style="background: var(--primary);">确认下单一键叫餐</button>
     </div>
 </div>
 
-<div class="profile-drawer" id="profileDrawer">
-    <div class="drawer-header">
-        <h3>👤 顾客点餐账户</h3>
-        <button class="close-drawer" id="closeProfile">&times;</button>
-    </div>
-    <div style="text-align: center; padding: 20px 0;">
-        <div style="width: 85px; height: 85px; border-radius: 50%; background: #f1f5f9; margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center; font-size: 36px;">🛎️</div>
-        <h4 th:text="${session.LOGIN_USER.username}" style="margin: 0; font-size: 18px; font-weight:700;">临时餐台用户</h4>
-        <p th:text="${session.LOGIN_USER.role == 'ADMIN' ? '系统管理员' : '在线就座顾客'}" style="margin: 6px 0 0 0; font-size: 13px; color:#64748b;">在线就座顾客</p>
-    </div>
-    <div style="background: #f8fafc; border-radius: 16px; padding: 20px; margin-top: 15px; font-size: 13px; line-height: 2.2; border: 1px solid #e2e8f0;">
-        <div style="display: flex; justify-content: space-between;"><strong>连接状态:</strong><span style="color: #10b981; font-weight:600;">● 已成功连线</span></div>
-        <div style="display: flex; justify-content: space-between;"><strong>台位归属:</strong><span>大厅堂食</span></div>
-        <div style="display: flex; justify-content: space-between;"><strong>计费服务:</strong><span>在线即时入账</span></div>
+<div class="drawer-overlay" id="profileDrawer">
+    <div class="drawer-content">
+        <div class="drawer-header">
+            <h3 class="drawer-title">个人中心 & 账户充值</h3>
+            <button class="drawer-close" id="closeProfile">×</button>
+        </div>
+        <div class="drawer-body">
+            <div class="recharge-box">
+                <h4 style="margin-top:0; margin-bottom:12px; color:#1e293b;">极速充值通道</h4>
+                <div class="form-group">
+                    <label class="form-label">输入充值金额 (元)</label>
+                    <input type="number" class="form-input" id="rechargeAmount" min="1" max="5000" placeholder="请输入充值额度">
+                </div>
+                <button type="button" class="submit-btn" onclick="submitRechargeData()">确认注入资金</button>
+            </div>
+            <div style="color: #64748b; font-size: 13px; line-height: 1.6;">
+                <p>💡 提示：账户充值成功后系统会异步刷新您的钱包可用余额，单次最高充值额度不得突破 5,000.00 元整。</p>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="modal-overlay" id="modalOverlay">
     <div class="modal-box">
-        <div class="drawer-header" style="border:none; margin:0;">
-            <h3 id="modalDishName" style="font-size: 20px; font-weight:700;">规格定制</h3>
-            <button class="close-drawer" id="closeModal">&times;</button>
-        </div>
-        <form th:action="@{/order/create}" method="post" style="margin-top: 20px;">
-            <input type="hidden" name="itemId" id="modalItemId">
-
-            <div class="option-group">
-                <div class="option-title">口味调节</div>
-                <div class="option-labels">
-                    <input type="radio" name="spicy" id="spicy1" value="none" checked>
-                    <label for="spicy1">不加辣</label>
-                    <input type="radio" name="spicy" id="spicy2" value="mild">
-                    <label for="spicy2">微辣</label>
-                    <input type="radio" name="spicy" id="spicy3" value="hot">
-                    <label for="spicy3">大辣🌶️</label>
-                </div>
+        <h3 id="modalDishName" style="margin-top:0;">菜品确认</h3>
+        <form th:action="@{/order/create}" action="" method="POST">
+            <input type="hidden" id="modalItemId" name="itemId">
+            <div class="form-group">
+                <label class="form-label">购买数量</label>
+                <input type="number" class="form-input" name="count" value="1" min="1" id="modalStockMax">
             </div>
-
-            <div class="option-group">
-                <div class="option-title">就餐方式</div>
-                <div class="option-labels">
-                    <input type="radio" name="pack" id="pack1" value="eat-in" checked>
-                    <label for="pack1">堂食</label>
-                    <input type="radio" name="pack" id="pack2" value="take-out">
-                    <label for="pack2">打包 (+$1)</label>
-                </div>
+            <div th:if="${session.LOGIN_USER == null}" style="color: #e74c3c; font-size: 12px; margin-bottom: 10px;">
+                ⚠️ 检查到您当前尚未登录，提交订单将触发安全机制。
             </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top:1px solid #f1f5f9;">
-                <span style="font-weight: 700; font-size: 14px; color:#334155;">选购数量</span>
-                <input type="number" name="count" value="1" min="1" id="modalStockMax" style="width: 65px; padding: 8px; border:1px solid #cbd5e1; border-radius:8px; text-align:center; font-weight:600;">
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button type="button" class="action-btn" id="closeModal" style="flex:1; background:#f1f5f9;">取消</button>
+                <button type="submit" class="checkout-btn" style="flex:1; padding:10px;">立即下单购买</button>
             </div>
-
-            <button type="submit" class="btn-select" style="margin-top: 25px; background: var(--primary);">确定并加入餐篮</button>
         </form>
     </div>
 </div>
 
-<script>
-    // 经压缩后的 4度以内极其自然的微幅倾斜响应代码
-    const cards = document.querySelectorAll('.menu-card');
-    cards.forEach(card => {
-        const imgLayer = card.querySelector('.card-image-layer');
+<script th:inline="javascript">
+    // 获取动态应用根上下文路径
+    const contextPath = [[${#httpServletRequest.getContextPath()}]];
 
+    // 顶栏成功通知自动延时淡出
+    const notification = document.getElementById('successNotification');
+    if (notification) {
+        setTimeout(() => {
+            notification.style.transition = 'opacity 0.5s ease';
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 500);
+        }, 3000);
+    }
+
+    // 卡片3D动态视差倾斜特效交互
+    const cards = document.querySelectorAll('.dish-card');
+    cards.forEach(card => {
         card.addEventListener('mousemove', (e) => {
             const rect = card.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             const xc = rect.width / 2;
             const yc = rect.height / 2;
-
-            const angleX = (yc - y) / yc * 4;
-            const angleY = (x - xc) / xc * 4;
-
-            card.style.transform = `perspective(2000px) rotateX(${angleX}deg) rotateY(${angleY}deg) scale3d(1.015, 1.015, 1.015)`;
-
-            const shadowX = -angleY * 1.2;
-            const shadowY = angleX * 1.2;
-            card.style.boxShadow = `${shadowX}px ${shadowY}px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 16px -10px rgba(15, 23, 42, 0.06)`;
-
-            if(imgLayer) {
-                imgLayer.style.transform = `translateZ(30px) translateX(${angleY * 0.4}px) translateY(${-angleX * 0.4}px)`;
-            }
+            const angleX = (yc - y) / 10;
+            const angleY = (x - xc) / 10;
+            card.style.transform = `translateY(-5px) rotateX(${angleX}deg) rotateY(${angleY}deg)`;
         });
-
         card.addEventListener('mouseleave', () => {
-            card.style.transform = 'perspective(2000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
-            card.style.boxShadow = 'var(--card-base-shadow)';
-            if(imgLayer) {
-                imgLayer.style.transform = 'translateZ(25px) translateX(0) translateY(0)';
-            }
+            card.style.transform = 'translateY(0) rotateX(0) rotateY(0)';
         });
     });
 
-    // 抽屉管理
+    // 抽屉侧滑动效集中管理
     const cartDrawer = document.getElementById('cartDrawer');
     const profileDrawer = document.getElementById('profileDrawer');
+
     document.getElementById('cartTrigger').addEventListener('click', () => cartDrawer.classList.toggle('open'));
     document.getElementById('closeCart').addEventListener('click', () => cartDrawer.classList.remove('open'));
     document.getElementById('profileTrigger').addEventListener('click', () => profileDrawer.classList.toggle('open'));
     document.getElementById('closeProfile').addEventListener('click', () => profileDrawer.classList.remove('open'));
 
-    // 规格弹窗管理
+    // 规格确认弹窗管理
     const modal = document.getElementById('modalOverlay');
     cards.forEach(card => {
         card.addEventListener('click', (e) => {
@@ -365,7 +531,7 @@
     });
     document.getElementById('closeModal').addEventListener('click', () => modal.classList.remove('open'));
 
-    // 联动定位
+    // 左侧导航栏与内容区域高亮联动定位
     const contentArea = document.getElementById('contentArea');
     const sidebarItems = document.querySelectorAll('.sidebar-item');
     sidebarItems.forEach(item => {
@@ -376,6 +542,80 @@
             contentArea.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' });
         });
     });
+
+    // ================= 购物车异步添加 =================
+    function addToCartDirect(itemId) {
+        const params = new URLSearchParams();
+        params.append('itemId', itemId);
+        params.append('count', '1');
+
+        fetch(`${contextPath}/cart/add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        })
+            .then(response => response.text())
+            .then(result => {
+                if(result === 'SUCCESS') {
+                    // 添加成功后，直接重刷当前页面，确保最新数据与 Thymeleaf 完全同步呈现
+                    location.reload();
+                } else if(result === 'NEED_LOGIN') {
+                    alert("检测到登录失效，请先登录系统！");
+                    window.location.href = `${contextPath}/login.html`;
+                } else {
+                    alert(result);
+                }
+            })
+            .catch(err => console.error("加入购物车出现异常：", err));
+    }
+
+    // ================= 购物车数量变更 =================
+    function updateCartQuantity(itemId, newCount) {
+        const params = new URLSearchParams();
+        params.append('itemId', itemId);
+        params.append('count', newCount);
+
+        fetch(`${contextPath}/cart/ajaxUpdate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    // 如果数量归零，或者选择动态整刷渲染，location.reload() 是最省心不出错的方法
+                    // 为了保障数据绝对一致和Thymeleaf同步，这里我们在异步更新后执行重刷
+                    location.reload();
+                } else {
+                    alert("更新购物车数量失败，请重试！");
+                }
+            });
+    }
+
+    // ================= 充值异步处理 =================
+    function submitRechargeData() {
+        const amt = document.getElementById('rechargeAmount').value;
+        const params = new URLSearchParams();
+        params.append('amount', amt);
+
+        fetch(`${contextPath}/user/recharge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        })
+            .then(response => response.text())
+            .then(result => {
+                if(result === 'SUCCESS') {
+                    alert("账户充值成功！");
+                    location.reload();
+                } else {
+                    alert("充值失败，请检查数额或登录状态。");
+                }
+            });
+    }
 </script>
 </body>
 </html>
+
+
+

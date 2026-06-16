@@ -7,7 +7,7 @@ import java.sql.SQLException;
 public class DBUtil {
     private static final String URL = "jdbc:mysql://localhost:3306/order_system?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true";
     private static final String USER = "root";
-    private static final String PASSWORD = "Bufan12*"; // 替换为你的密码
+    private static final String PASSWORD = "114514"; // 替换为你的密码
 
     // 利用 ThreadLocal 保证同一个线程（同一个HTTP请求）拿到的是同一个 Connection，这是做事务控制的前提
     private static ThreadLocal<Connection> connectionHolder = new ThreadLocal<>();

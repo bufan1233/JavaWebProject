@@ -28,7 +28,7 @@ public class LoginServlet extends HttpServlet {
                 HttpSession session = req.getSession();
                 session.setAttribute("LOGIN_USER", user);
                 // 登录成功，跳转到菜单页
-                resp.sendRedirect("/menu");
+                resp.sendRedirect(req.getContextPath() + "/menu");
             } else {
                 resp.getWriter().write("用户名或密码错误");
             }

@@ -16,7 +16,7 @@ public class ThymeleafListener implements ServletContextListener {
         // 1. 创建模板解析器 (指定 HTML 文件去哪里找)
         ServletContextTemplateResolver templateResolver = new ServletContextTemplateResolver(sce.getServletContext());
 
-        // 你的 html 文件应该放在 webapp/WEB-INF/pages/ 目录下
+        // html 文件放在 webapp/WEB-INF/pages/ 目录下
         templateResolver.setPrefix("/WEB-INF/pages/");
         templateResolver.setSuffix(".html");
         templateResolver.setTemplateMode(TemplateMode.HTML);
@@ -30,7 +30,7 @@ public class ThymeleafListener implements ServletContextListener {
 
         // 3. 将引擎存入 ServletContext (全局上下文)，供后面的 Servlet 使用
         sce.getServletContext().setAttribute("templateEngine", templateEngine);
-        System.out.println("====== Thymeleaf 模板引擎初始化成功 ======");
+        System.out.println("====== Thymeleaf is settled. ======");
     }
 
     @Override

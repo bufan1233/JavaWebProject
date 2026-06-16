@@ -1,10 +1,13 @@
 package com.arctic.equipment.entity;
 
+import java.math.BigDecimal; // 必须导入
+
 public class User {
     private Integer id;
     private String username;
     private String password;
     private String role;
+    private BigDecimal balance; // 新增：用户余额
 
     public User() {}
     public User(Integer id, String username) { this.id = id; this.username = username; }
@@ -17,4 +20,8 @@ public class User {
     public void setPassword(String password) { this.password = password; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    // 新增 Getter/Setter
+    public BigDecimal getBalance() { return balance; }
+    public void setBalance(BigDecimal balance) { this.balance = balance; }
 }

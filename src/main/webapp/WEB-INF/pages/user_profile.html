@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>个人中心 - 极地餐饮系统</title>
+    <style>
+        :root {
+            --primary: #27ae60;
+            --primary-dark: #219653;
+            --bg: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); margin: 0; padding: 40px; color: var(--text-main); }
+        .profile-container { max-width: 800px; margin: 0 auto; display: grid; grid-template-columns: 280px 1fr; gap: 30px; }
+        .sidebar-panel { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); text-align: center; }
+        .avatar { width: 90px; height: 90px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 15px; font-weight: bold; }
+        .main-panel { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+        .panel-section { margin-bottom: 35px; }
+        .panel-section h3 { border-left: 4px solid var(--primary); padding-left: 10px; margin-bottom: 20px; font-size: 18px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .info-item { background: #f1f5f9; padding: 15px; border-radius: 8px; }
+        .info-item label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 5px; }
+        .info-item span { font-size: 16px; font-weight: 600; }
+        .recharge-box { display: flex; gap: 10px; margin-top: 15px; }
+        .recharge-input { flex: 1; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; outline: none; }
+        .recharge-btn { background: var(--primary); color: white; border: none; padding: 0 25px; border-radius: 8px; font-size: 15px; cursor: pointer; transition: background 0.2s; }
+        .recharge-btn:hover { background: var(--primary-dark); }
+        .back-link { display: inline-block; margin-top: 20px; color: var(--text-muted); text-decoration: none; font-size: 14px; }
+        .back-link:hover { color: var(--primary); }
+    </style>
+</head>
+<body>
+<div class="profile-container">
+    <div class="sidebar-panel">
+        <div class="avatar" th:text="${#strings.substring(currentUser.username,0,1)}">U</div>
+        <h2 th:text="${currentUser.username}">用户名</h2>
+        <p style="color: var(--text-muted); font-size: 14px;" th:text="${currentUser.role}">CUSTOMER</p>
+        <a href="/menu" class="back-link">← 返回点餐中心</a>
+    </div>
+
+    <div class="main-panel">
+        <div class="panel-section">
+            <h3>基本资料</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>账户ID</label>
+                    <span th:text="${currentUser.id}">0000</span>
+                </div>
+                <div class="info-item">
+                    <label>绑定状态</label>
+                    <span style="color: #27ae60;">● 已认证</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h3>我的钱包</h3>
+            <div class="info-grid">
+                <div class="info-item" style="grid-column: span 2; background: #e8f8f0; border: 1px solid #c2f0d5;">
+                    <label style="color: #2e7d32;">当前账户余额</label>
+                    <span style="font-size: 28px; color: var(--primary); font-family: monospace;"
+                          th:text="'￥' + ${currentUser.balance != null ? currentUser.balance : '0.00'}">￥0.00</span>
+                </div>
+            </div>
+
+            <form action="/user/recharge" method="POST" style="margin-top: 20px;">
+                <label style="font-size: 14px; color: var(--text-muted);">请输入充值金额 (元)：</label>
+                <div class="recharge-box">
+                    <input type="number" name="amount" class="recharge-input" placeholder="0.00" min="1" step="0.01" required>
+                    <button type="submit" class="recharge-btn">立即充值</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>
