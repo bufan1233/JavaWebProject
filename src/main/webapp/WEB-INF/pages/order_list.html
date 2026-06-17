@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>我的订单</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: #f8fafc;
+            padding: 40px;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(15,23,42,0.04);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .back-link:link, .back-link:visited {
+            display: inline-block;
+            margin-bottom: 25px;
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .back-link:hover { color: #007bff; transform: translateX(-4px); }
+
+        h2 { margin: 0 0 20px 0; font-size: 22px; font-weight: 700; color: #0f172a; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        th { text-align: left; color: #64748b; background: #f8fafc; font-weight: 600; font-size: 13px; }
+
+        .status-paid {
+            color: #10b981;
+            background: #e0f2fe; /* 改为淡雅的浅蓝色或浅绿色基调 */
+            background: #f0fdf4;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <a th:href="@{/menu}" class="back-link">← 返回菜单点餐</a>
+    <h2>📜 您的订单记录</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>订单号</th>
+            <th>菜品</th>
+            <th>数量</th>
+            <th>总价</th>
+            <th>交易时间</th>
+            <th>状态</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="order : ${orderList}">
+            <td th:text="${'# ' + order.id}" style="color:#64748b;">#101</td>
+            <td th:text="${order.itemName}" style="font-weight:500;">菜品</td>
+            <td th:text="${order.quantity}">1</td>
+            <td th:text="'￥' + ${order.itemPrice * order.quantity}" style="font-weight:700; color:#0f172a;">￥0.00</td>
+            <td th:text="${#dates.format(order.orderTime, 'yyyy-MM-dd HH:mm')}" style="color:#64748b;">时间</td>
+            <td><span class="status-paid">已支付</span></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

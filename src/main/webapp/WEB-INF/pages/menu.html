@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>顾客点餐中心</title>
+    <style>
+        .sidebar-container { height: calc(100vh - 70px) !important; overflow-y: auto !important; }
+        #contentArea { height: calc(100vh - 70px) !important; overflow-y: auto !important; position: relative; scroll-behavior: smooth; }
+        .cart-drawer { height: calc(100vh - 70px) !important; overflow-y: auto !important; }
+
+        /* 2. 卡牌放大，右侧留出图片空间 */
+        .dish-card {
+            width: 280px !important;
+            height: 380px !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            transform-style: preserve-3d; /* 激活动态3D视角 */
+            transition: transform 0.1s ease-out;
+        }
+        .dish-card-right-thumb {
+            position: absolute; right: 10px; top: 10px; width: 100px; height: 100px; border-radius: 8px; background: #e2e8f0;
+        }
+
+        /* 3. 购物车挂载到右下角 */
+        #cartBadgeTrigger {
+            position: fixed !important;
+            bottom: 30px !important;
+            right: 30px !important;
+            z-index: 999 !important;
+            background: var(--primary);
+            padding: 15px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        :root {
+            --primary: #27ae60;
+            --bg: #f1f5f9;
+            --card-base-shadow:
+                    0 12px 24px -10px rgba(15, 23, 42, 0.06),
+                    0 4px 10px -5px rgba(15, 23, 42, 0.03),
+                    0 0 0 1px rgba(15, 23, 42, 0.01);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg); margin: 0; padding: 0;
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+            perspective: 1000px; /* 为3D倾斜提供透视 */
+        }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #ffffff; padding: 15px 40px; z-index: 100;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.02);
+        }
+
+        .brand-title {
+            font-size: 20px; font-weight: 700; color: #1e293b; letter-spacing: -0.5px;
+        }
+
+        .nav-right {
+            display: flex; align-items: center; gap: 20px;
+        }
+
+        .user-wallet {
+            font-size: 14px; color: #64748b; background: #f8fafc; padding: 6px 12px; border-radius: 20px; border: 1px solid #e2e8f0;
+        }
+
+        .wallet-amount {
+            color: #e74c3c; font-weight: 600; margin-left: 4px;
+        }
+
+        .action-btn {
+            background: none; border: none; padding: 8px 14px; font-size: 14px; color: #475569;
+            cursor: pointer; border-radius: 8px; transition: all 0.2s; font-weight: 500;
+        }
+
+        .action-btn:hover {
+            background: #f1f5f9; color: #0f172a;
+        }
+
+        .cart-btn {
+            position: relative; background: #eafaf1; color: var(--primary); font-weight: 600;
+        }
+
+        .cart-btn:hover {
+            background: #d4f5e2; color: #219653;
+        }
+
+        .cart-badge {
+            position: absolute; top: -5px; right: -5px; background: #ff4757; color: white;
+            font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: 600;
+            box-shadow: 0 2px 8px rgba(255,71,87,0.3);
+        }
+
+        .main-container {
+            display: flex; flex: 1; overflow: hidden; position: relative;
+        }
+
+        .sidebar {
+            width: 240px; background: #ffffff; border-right: 1px solid #f1f5f9;
+            padding: 20px 10px; display: flex; flex-direction: column; gap: 4px;
+        }
+
+        .sidebar-item {
+            padding: 12px 16px; border-radius: 8px; font-size: 14px; color: #475569;
+            cursor: pointer; transition: all 0.2s; font-weight: 500;
+        }
+
+        .sidebar-item:hover {
+            background: #f8fafc; color: #0f172a;
+        }
+
+        .sidebar-item.active {
+            background: #eafaf1; color: var(--primary); font-weight: 600;
+        }
+
+        .content-area {
+            flex: 1; padding: 30px 40px; overflow-y: auto; scroll-behavior: smooth;
+        }
+
+        .section-title {
+            font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .section-title::before {
+            content: ''; display: inline-block; width: 4px; height: 16px; background: var(--primary); border-radius: 2px;
+        }
+
+        .dish-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 25px; margin-bottom: 40px;
+        }
+
+        .dish-card {
+            background: #ffffff; border-radius: 16px; padding: 20px;
+            box-shadow: var(--card-base-shadow); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 12px;
+            transform-style: preserve-3d;
+        }
+
+        .dish-card:hover {
+            transform: translateY(-5px) rotateX(2deg) rotateY(2deg);
+            box-shadow: 0 20px 35px -10px rgba(15, 23, 42, 0.12), 0 10px 15px -5px rgba(15, 23, 42, 0.04);
+        }
+
+        .dish-name {
+            font-size: 16px; font-weight: 600; color: #1e293b; margin: 0;
+        }
+
+        .dish-meta {
+            display: flex; justify-content: space-between; align-items: center; margin-top: auto;
+        }
+
+        .dish-price {
+            font-size: 18px; font-weight: 700; color: #ff4757;
+        }
+
+        .dish-stock {
+            font-size: 12px; color: #94a3b8;
+        }
+
+        .add-cart-btn {
+            width: 100%; background: var(--primary); color: white; border: none;
+            padding: 10px; border-radius: 10px; font-weight: 600; cursor: pointer;
+            transition: background 0.2s; margin-top: 8px;
+        }
+
+        .add-cart-btn:hover {
+            background: #219653;
+        }
+
+        .add-cart-btn:disabled {
+            background: #cbd5e1; color: #94a3b8; cursor: not-allowed;
+        }
+
+        /* 抽屉基类 */
+        .drawer-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.3); backdrop-filter: blur(4px);
+            z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+
+        .drawer-overlay.open {
+            opacity: 1; pointer-events: auto;
+        }
+
+        .drawer-content {
+            position: absolute; top: 0; right: 0; width: 420px; height: 100%;
+            background: #ffffff; box-shadow: -10px 0 40px rgba(0,0,0,0.1);
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex; flex-direction: column;
+        }
+
+        .drawer-overlay.open .drawer-content {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            padding: 24px; border-bottom: 1px solid #f1f5f9;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .drawer-title {
+            font-size: 18px; font-weight: 700; color: #0f172a; margin: 0;
+        }
+
+        .drawer-close {
+            background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer;
+        }
+
+        .drawer-close:hover {
+            color: #475569;
+        }
+
+        .drawer-body {
+            flex: 1; padding: 24px; overflow-y: auto;
+        }
+
+        /* 购物车列表样式 */
+        .cart-item-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 0; border-bottom: 1px solid #f8fafc;
+        }
+
+        .cart-item-info {
+            display: flex; flex-direction: column; gap: 4px;
+        }
+
+        .cart-item-name {
+            font-size: 14px; font-weight: 600; color: #1e293b;
+        }
+
+        .cart-item-price {
+            font-size: 13px; color: #ff4757; font-weight: 600;
+        }
+
+        .quantity-control {
+            display: flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 4px; border-radius: 8px;
+        }
+
+        .quantity-btn {
+            background: #ffffff; border: none; width: 24px; height: 24px; border-radius: 6px;
+            font-size: 14px; font-weight: 600; color: #475569; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .quantity-value {
+            font-size: 13px; font-weight: 600; color: #1e293b; min-width: 16px; text-align: center;
+        }
+
+        .drawer-footer {
+            padding: 24px; border-top: 1px solid #f1f5f9; background: #f8fafc;
+        }
+
+        .cart-summary {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+        }
+
+        .summary-label {
+            font-size: 14px; color: #64748b;
+        }
+
+        .summary-total {
+            font-size: 22px; font-weight: 800; color: #ff4757;
+        }
+
+        .checkout-btn {
+            width: 100%; background: var(--primary); color: white; border: none; padding: 14px;
+            border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+        }
+
+        .checkout-btn:hover {
+            background: #219653;
+        }
+
+        /* 充值界面元素样式 */
+        .recharge-box {
+            background: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px; display: flex; flex-direction: column; gap: 6px;
+        }
+
+        .form-label {
+            font-size: 13px; font-weight: 600; color: #475569;
+        }
+
+        .form-input {
+            padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; transition: border 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+        }
+
+        .submit-btn {
+            width: 100%; background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+        }
+
+        .submit-btn:hover {
+            background: #2980b9;
+        }
+
+        /* 传统规格规格弹窗（保持原有代码不删除） */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px);
+            z-index: 300; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1; pointer-events: auto;
+        }
+
+        .modal-box {
+            background: #ffffff; border-radius: 16px; width: 360px; padding: 25px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15); position: relative;
+        }
+
+        /* 成功提示栏 */
+        .alert-success-top {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: #2ecc71; color: white; padding: 12px 30px; border-radius: 30px;
+            font-weight: 600; box-shadow: 0 10px 20px rgba(46,204,113,0.3);
+            z-index: 999; animation: slideDownIn 0.4s ease forwards;
+        }
+
+        @keyframes slideDownIn {
+            0% { top: -60px; opacity: 0; }
+            100% { top: 20px; opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div th:if="${param.success}" class="alert-success-top" id="successNotification">
+    🎉 交易结算成功！美味即刻为您呈现。
+</div>
+
+<div class="header">
+    <div class="brand-title">Arctic 智慧餐饮中心</div>
+    <div class="nav-right">
+        <div class="user-wallet" th:if="${session.LOGIN_USER != null}">
+            <span>账户可用余额:</span>
+            <span class="wallet-amount" th:text="'￥' + ${session.LOGIN_USER.balance != null ? session.LOGIN_USER.balance : '0.00'}">￥0.00</span>
+        </div>
+
+        <button class="action-btn" th:if="${session.LOGIN_USER.role == 'ADMIN'}" th:onclick="'window.location.href=\'' + @{/admin_menu.html} + '\''" style="background: #eafaf1; color: var(--primary); font-weight: 600;">🔧 管理中心</button>
+        <button class="action-btn" id="profileTrigger">个人中心 & 充值</button>
+        <button class="action-btn" th:onclick="'window.location.href=\'' + @{/order/my} + '\''">我的历史订单</button>
+        <button class="action-btn cart-btn" id="cartTrigger">
+            购物车清单
+            <span class="cart-badge" id="cartBadgeCount" th:text="${session.CART != null ? session.CART.items.size() : 0}">0</span>
+        </button>
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="sidebar">
+        <div class="sidebar-item active" data-target="sec-all">全部分类</div>
+        <div class="sidebar-item" data-target="sec-hot">爆款热销</div>
+        <div class="sidebar-item" data-target="sec-drink">精选饮品</div>
+    </div>
+
+    <div class="content-area" id="contentArea">
+        <div class="section-title" id="sec-all">全部分类</div>
+        <div class="dish-grid">
+            <div class="dish-card" th:each="item : ${menuList}"
+                 th:data-id="${item.id}" th:data-name="${item.name}" th:data-stock="${item.stock}">
+                <h3 class="dish-name" th:text="${item.name}">黄金炒饭</h3>
+                <div class="dish-meta">
+                    <span class="dish-price" th:text="'￥' + ${item.price}">￥25.00</span>
+                    <span class="dish-stock" th:text="'剩余库存: ' + ${item.stock} + ' 份'">剩余库存: 10 份</span>
+                </div>
+                <button class="add-cart-btn"
+                        th:disabled="${item.stock <= 0}"
+                        th:text="${item.stock > 0 ? '加入购物车' : '已售罄'}"
+                        th:onclick="'event.stopPropagation(); addToCartDirect(' + ${item.id} + ')'">
+                    加入购物车
+                </button>
+            </div>
+        </div>
+
+        <div class="section-title" id="sec-hot">爆款热销</div>
+        <div class="dish-grid">
+            <div class="dish-card" th:each="item : ${hotItems}"
+                 th:data-id="${item.id}" th:data-name="${item.name}" th:data-stock="${item.stock}">
+                <h3 class="dish-name" th:text="${item.name}">爆款菜品</h3>
+                <div class="dish-meta">
+                    <span class="dish-price" th:text="'￥' + ${item.price}">￥0.00</span>
+                    <span class="dish-stock" th:text="'剩余库存: ' + ${item.stock} + ' 份'">剩余库存: 0 份</span>
+                </div>
+                <button class="add-cart-btn"
+                        th:disabled="${item.stock <= 0}"
+                        th:text="${item.stock > 0 ? '加入购物车' : '已售罄'}"
+                        th:onclick="'event.stopPropagation(); addToCartDirect(' + ${item.id} + ')'">
+                    加入购物车
+                </button>
+            </div>
+        </div>
+
+        <div class="section-title" id="sec-drink">精选饮品</div>
+        <div class="dish-grid">
+            <div class="dish-card" th:each="item : ${drinkItems}"
+                 th:data-id="${item.id}" th:data-name="${item.name}" th:data-stock="${item.stock}">
+                <h3 class="dish-name" th:text="${item.name}">饮品名称</h3>
+                <div class="dish-meta">
+                    <span class="dish-price" th:text="'￥' + ${item.price}">￥0.00</span>
+                    <span class="dish-stock" th:text="'剩余库存: ' + ${item.stock} + ' 份'">剩余库存: 0 份</span>
+                </div>
+                <button class="add-cart-btn"
+                        th:disabled="${item.stock <= 0}"
+                        th:text="${item.stock > 0 ? '加入购物车' : '已售罄'}"
+                        th:onclick="'event.stopPropagation(); addToCartDirect(' + ${item.id} + ')'">
+                    加入购物车
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="drawer-overlay" id="cartDrawer">
+    <div class="drawer-content">
+        <div class="drawer-header">
+            <h3 class="drawer-title">购物车清单</h3>
+            <button class="drawer-close" id="closeCart">×</button>
+        </div>
+        <div class="drawer-body">
+            <div id="cartItemsContainer">
+                <div th:if="${session.CART == null || session.CART.items.isEmpty()}" style="color:#94a3b8; text-align:center; margin-top:40px;">
+                    您的购物车还是空的，快去选购吧！
+                </div>
+                <div th:if="${session.CART != null}" th:each="cartItem : ${session.CART.items}" class="cart-item-row" th:id="'cart-item-' + ${cartItem.menuItem.id}">
+                    <div class="cart-item-info">
+                        <span class="cart-item-name" th:text="${cartItem.menuItem.name}">菜品名称</span>
+                        <span class="cart-item-price" th:text="'￥' + ${cartItem.menuItem.price}">￥0.00</span>
+                    </div>
+                    <div class="quantity-control">
+                        <button class="quantity-btn" th:onclick="'updateCartQuantity(' + ${cartItem.menuItem.id} + ', -1)'">-</button>
+                        <span class="quantity-value" th:text="${cartItem.count}">1</span>
+                        <button class="quantity-btn" th:onclick="'updateCartQuantity(' + ${cartItem.menuItem.id} + ', 1)'">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="drawer-footer">
+            <div class="cart-summary">
+                <span class="summary-label">应付合计:</span>
+                <span class="summary-total" id="cartTotalMoneyText" th:text="'￥' + ${session.CART != null ? session.CART.getTotalMoney() : '0.00'}">￥0.00</span>
+            </div>
+            <form th:action="@{/order/payCart}" action="" method="POST">
+                <button type="submit" class="checkout-btn" th:disabled="${session.CART == null || session.CART.items.isEmpty()}">确认收银结算</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+    <div class="drawer-overlay" id="profileDrawer">
+    <div class="drawer-content">
+        <div class="drawer-header">
+            <h3 class="drawer-title">个人中心 & 账户充值</h3>
+            <button class="drawer-close" id="closeProfile">×</button>
+        </div>
+        <div class="drawer-body">
+            <div class="recharge-box">
+                <h4 style="margin-top:0; margin-bottom:12px; color:#1e293b;">极速充值通道</h4>
+                <div class="form-group">
+                    <label class="form-label">输入充值金额 (元)</label>
+                    <input type="number" class="form-input" id="rechargeAmount" min="1" max="5000" placeholder="请输入充值额度">
+                </div>
+                <button type="button" class="submit-btn" onclick="submitRechargeData()">确认注入资金</button>
+            </div>
+
+            <div class="recharge-box" style="margin-top: 20px;">
+                <h4 style="margin-top:0; margin-bottom:12px; color:#1e293b;">修改账户密码</h4>
+                <div class="form-group">
+                    <label class="form-label">当前旧密码</label>
+                    <input type="password" class="form-input" id="oldPassword" placeholder="请输入当前密码">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">新密码</label>
+                    <input type="password" class="form-input" id="newPassword" placeholder="请输入新密码">
+                </div>
+                <button type="button" class="submit-btn" onclick="submitChangePassword()" style="background: #f39c12;">确认修改密码</button>
+            </div>
+
+            <div style="margin-top: 25px; text-align: center;">
+                <button type="button" class="submit-btn" onclick="performLogout()" style="background: #e74c3c; max-width: 200px;">退出登录</button>
+            </div>
+
+            <div style="color: #64748b; font-size: 13px; line-height: 1.6; margin-top: 20px;">
+                <p>💡 提示：账户充值成功后系统会异步刷新您的钱包可用余额，单次最高充值额度不得突破 5,000.00 元整。</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+        <h3 id="modalDishName" style="margin-top:0;">菜品确认</h3>
+        <form th:action="@{/order/create}" action="" method="POST">
+            <input type="hidden" id="modalItemId" name="itemId">
+            <div class="form-group">
+                <label class="form-label">购买数量</label>
+                <input type="number" class="form-input" name="count" value="1" min="1" id="modalStockMax">
+            </div>
+            <div th:if="${session.LOGIN_USER == null}" style="color: #e74c3c; font-size: 12px; margin-bottom: 10px;">
+                ⚠️ 检查到您当前尚未登录，提交订单将触发安全机制。
+            </div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button type="button" class="action-btn" id="closeModal" style="flex:1; background:#f1f5f9;">取消</button>
+                <button type="submit" class="checkout-btn" style="flex:1; padding:10px;">立即下单购买</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    // 获取动态应用根上下文路径
+    const contextPath = [[${#httpServletRequest.getContextPath()}]];
+
+    // 顶栏成功通知自动延时淡出
+    const notification = document.getElementById('successNotification');
+    if (notification) {
+        setTimeout(() => {
+            notification.style.transition = 'opacity 0.5s ease';
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 500);
+        }, 3000);
+    }
+
+    // 卡片3D动态视差倾斜特效交互
+    const cards = document.querySelectorAll('.dish-card');
+    cards.forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const xc = rect.width / 2;
+            const yc = rect.height / 2;
+            const angleX = (yc - y) / 10;
+            const angleY = (x - xc) / 10;
+            card.style.transform = `translateY(-5px) rotateX(${angleX}deg) rotateY(${angleY}deg)`;
+        });
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = 'translateY(0) rotateX(0) rotateY(0)';
+        });
+    });
+
+    // 抽屉侧滑动效集中管理
+    const cartDrawer = document.getElementById('cartDrawer');
+    const profileDrawer = document.getElementById('profileDrawer');
+
+    document.getElementById('cartTrigger').addEventListener('click', () => cartDrawer.classList.toggle('open'));
+    document.getElementById('closeCart').addEventListener('click', () => cartDrawer.classList.remove('open'));
+    document.getElementById('profileTrigger').addEventListener('click', () => profileDrawer.classList.toggle('open'));
+    document.getElementById('closeProfile').addEventListener('click', () => profileDrawer.classList.remove('open'));
+
+    // 规格确认弹窗管理
+    const modal = document.getElementById('modalOverlay');
+    cards.forEach(card => {
+        card.addEventListener('click', (e) => {
+            if(e.target.tagName === 'BUTTON' && e.target.disabled) return;
+            document.getElementById('modalDishName').innerText = card.getAttribute('data-name');
+            document.getElementById('modalItemId').value = card.getAttribute('data-id');
+            document.getElementById('modalStockMax').max = card.getAttribute('data-stock');
+            modal.classList.add('open');
+        });
+    });
+    document.getElementById('closeModal').addEventListener('click', () => modal.classList.remove('open'));
+
+    // 左侧导航栏与内容区域高亮联动定位
+    const contentArea = document.getElementById('contentArea');
+    const sidebarItems = document.querySelectorAll('.sidebar-item');
+    sidebarItems.forEach(item => {
+        item.addEventListener('click', () => {
+            sidebarItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            const target = document.getElementById(item.getAttribute('data-target'));
+            contentArea.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' });
+        });
+    });
+
+    // ================= 购物车异步添加 =================
+    function addToCartDirect(itemId) {
+        const params = new URLSearchParams();
+        params.append('itemId', itemId);
+        params.append('count', '1');
+
+        fetch(`${contextPath}/cart/add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        })
+            .then(response => response.text())
+            .then(result => {
+                if(result === 'SUCCESS') {
+                    // 添加成功后，直接重刷当前页面，确保最新数据与 Thymeleaf 完全同步呈现
+                    location.reload();
+                } else if(result === 'NEED_LOGIN') {
+                    alert("检测到登录失效，请先登录系统！");
+                    window.location.href = `${contextPath}/login.html`;
+                } else {
+                    alert(result);
+                }
+            })
+            .catch(err => console.error("加入购物车出现异常：", err));
+    }
+
+    // ================= 购物车数量变更 =================
+    function updateCartQuantity(itemId, delta) {
+        // 从当前 DOM 中的 quantity-value 读取当前数量，计算新的绝对数量
+        const itemRow = document.getElementById('cart-item-' + itemId);
+        let currentCount = 0;
+        if (itemRow) {
+            const qtySpan = itemRow.querySelector('.quantity-value');
+            if (qtySpan) {
+                currentCount = parseInt(qtySpan.textContent) || 0;
+            }
+        }
+        const newCount = currentCount + delta;
+
+        // 不允许数量小于 0
+        if (newCount < 0) return;
+
+        const params = new URLSearchParams();
+        params.append('itemId', itemId);
+        params.append('count', newCount.toString());
+
+        fetch(`${contextPath}/cart/ajaxUpdate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    // 动态更新 DOM，不再整页刷新，购物车抽屉保持打开
+                    const badge = document.getElementById('cartBadgeCount');
+                    const totalText = document.getElementById('cartTotalMoneyText');
+                    const container = document.getElementById('cartItemsContainer');
+                    const checkoutBtn = document.querySelector('.checkout-btn');
+
+                    if (data.newCount > 0 && itemRow) {
+                        // 更新该商品行的数量显示和单项总价
+                        const qtySpan = itemRow.querySelector('.quantity-value');
+                        const priceSpan = itemRow.querySelector('.cart-item-price');
+                        if (qtySpan) qtySpan.textContent = data.newCount;
+                        if (priceSpan) priceSpan.textContent = '￥' + data.itemTotalPrice;
+                    } else if (data.newCount <= 0 && itemRow) {
+                        // 数量归零，移除此行
+                        itemRow.remove();
+                    }
+
+                    // 刷新购物车总金额
+                    if (totalText) totalText.textContent = '￥' + data.totalMoney;
+
+                    // 刷新顶栏 badge 数量
+                    if (badge) badge.textContent = data.cartSize;
+
+                    // 如果购物车已空，显示空提示 & 禁用结算按钮
+                    if (data.cartSize === 0) {
+                        container.innerHTML = '<div style="color:#94a3b8; text-align:center; margin-top:40px;">您的购物车还是空的，快去选购吧！</div>';
+                        if (checkoutBtn) checkoutBtn.disabled = true;
+                    } else {
+                        // 确保结算按钮可用
+                        if (checkoutBtn) checkoutBtn.disabled = false;
+                    }
+                } else {
+                    alert("更新购物车数量失败，请重试！");
+                }
+            })
+            .catch(err => {
+                console.error("更新购物车异常：", err);
+                alert("网络异常，请重试！");
+            });
+    }
+
+    // ================= 退出登录 =================
+    function performLogout() {
+        if (confirm("确定要退出登录吗？")) {
+            window.location.href = `${contextPath}/logout`;
+        }
+    }
+
+    // ================= 修改密码异步处理 =================
+    function submitChangePassword() {
+        const oldPwd = document.getElementById('oldPassword').value;
+        const newPwd = document.getElementById('newPassword').value;
+
+        if (!oldPwd || !newPwd) {
+            alert("请填写旧密码和新密码");
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.append('oldPassword', oldPwd);
+        params.append('newPassword', newPwd);
+
+        fetch(`${contextPath}/user/changePassword`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        })
+            .then(response => response.text())
+            .then(result => {
+                if (result === 'SUCCESS') {
+                    alert("密码修改成功，请重新登录！");
+                    window.location.href = `${contextPath}/logout`;
+                } else {
+                    alert(result);
+                }
+            })
+            .catch(err => {
+                console.error("修改密码异常：", err);
+                alert("网络异常，请重试！");
+            });
+    }
+
+    // ================= 充值异步处理 =================
+    function submitRechargeData() {
+        const amt = document.getElementById('rechargeAmount').value;
+        const params = new URLSearchParams();
+        params.append('amount', amt);
+
+        fetch(`${contextPath}/user/recharge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        })
+            .then(response => response.text())
+            .then(result => {
+                if(result === 'SUCCESS') {
+                    alert("账户充值成功！");
+                    location.reload();
+                } else {
+                    alert("充值失败，请检查数额或登录状态。");
+                }
+            });
+    }
+</script>
+</body>
+</html>
+
+
+
