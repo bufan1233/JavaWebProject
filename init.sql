@@ -1,4 +1,5 @@
 
+SET NAMES utf8mb4;
 
 DROP DATABASE IF EXISTS order_system;
 CREATE DATABASE order_system DEFAULT CHARACTER SET utf8mb4;
@@ -23,7 +24,7 @@ CREATE TABLE IF NOT EXISTS menu_item (
     name VARCHAR(100) NOT NULL,
     price DECIMAL(10,2) NOT NULL,
     stock INT UNSIGNED NOT NULL DEFAULT 0,
-    category VARCHAR(20) DEFAULT '主食' COMMENT '分类：主食、热销、饮品'
+    category VARCHAR(20) COMMENT '分类：主食、热销、饮品'
 );
 
 
